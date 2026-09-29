@@ -1,0 +1,1 @@
+{"name":"institute-lms-assets","private":true,"scripts":{"build":"npm --prefix frontend run build"}}

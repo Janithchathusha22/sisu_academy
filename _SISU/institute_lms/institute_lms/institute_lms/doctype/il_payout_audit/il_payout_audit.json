@@ -1,0 +1,42 @@
+{
+  "doctype": "DocType",
+  "name": "IL Payout Audit",
+  "module": "Institute LMS",
+  "custom": 0,
+  "engine": "InnoDB",
+  "autoname": "hash",
+  "field_order": [
+    "action",
+    "actor",
+    "reference",
+    "details"
+  ],
+  "fields": [
+    {
+      "fieldname": "action",
+      "label": "Action",
+      "fieldtype": "Data",
+      "reqd": 1
+    },
+    {
+      "fieldname": "actor",
+      "label": "Actor",
+      "fieldtype": "Link",
+      "reqd": 1,
+      "options": "User"
+    },
+    {
+      "fieldname": "reference",
+      "label": "Reference",
+      "fieldtype": "Data",
+      "reqd": 1
+    },
+    {
+      "fieldname": "details",
+      "label": "Details",
+      "fieldtype": "Small Text"
+    }
+  ],
+  "permissions": [],
+  "track_changes": 0
+}

@@ -1,0 +1,66 @@
+{
+  "doctype": "DocType",
+  "name": "IL Profile Relationship",
+  "module": "Institute LMS",
+  "custom": 0,
+  "engine": "InnoDB",
+  "autoname": "hash",
+  "field_order": [
+    "relationship_key",
+    "profile",
+    "user",
+    "kind",
+    "status",
+    "reviewed_by",
+    "reason"
+  ],
+  "fields": [
+    {
+      "fieldname": "relationship_key",
+      "label": "Relationship Key",
+      "fieldtype": "Data",
+      "unique": 1,
+      "reqd": 1
+    },
+    {
+      "fieldname": "profile",
+      "label": "Profile",
+      "fieldtype": "Link",
+      "reqd": 1,
+      "options": "IL Public Profile"
+    },
+    {
+      "fieldname": "user",
+      "label": "User",
+      "fieldtype": "Link",
+      "reqd": 1,
+      "options": "User"
+    },
+    {
+      "fieldname": "kind",
+      "label": "Kind",
+      "fieldtype": "Select",
+      "reqd": 1,
+      "options": "Follow\nStudent join\nTeacher membership"
+    },
+    {
+      "fieldname": "status",
+      "label": "Status",
+      "fieldtype": "Select",
+      "default": "Pending",
+      "options": "Pending\nActive\nRejected\nLeft\nRemoved"
+    },
+    {
+      "fieldname": "reviewed_by",
+      "label": "Reviewed By",
+      "fieldtype": "Link",
+      "options": "User"
+    },
+    {
+      "fieldname": "reason",
+      "label": "Reason",
+      "fieldtype": "Small Text"
+    }
+  ],
+  "permissions": []
+}

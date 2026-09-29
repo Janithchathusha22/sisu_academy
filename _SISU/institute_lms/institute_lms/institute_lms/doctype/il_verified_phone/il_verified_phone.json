@@ -1,0 +1,35 @@
+{
+  "doctype": "DocType",
+  "name": "IL Verified Phone",
+  "module": "Institute LMS",
+  "custom": 0,
+  "engine": "InnoDB",
+  "autoname": "hash",
+  "field_order": [
+    "user",
+    "phone",
+    "verified_at"
+  ],
+  "fields": [
+    {
+      "fieldname": "user",
+      "label": "User",
+      "fieldtype": "Link",
+      "unique": 1,
+      "reqd": 1,
+      "options": "User"
+    },
+    {
+      "fieldname": "phone",
+      "label": "Phone",
+      "fieldtype": "Data",
+      "reqd": 1
+    },
+    {
+      "fieldname": "verified_at",
+      "label": "Verified At",
+      "fieldtype": "Datetime"
+    }
+  ],
+  "permissions": []
+}

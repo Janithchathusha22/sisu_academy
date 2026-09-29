@@ -1,0 +1,51 @@
+{
+  "doctype": "DocType",
+  "name": "IL Product Entitlement",
+  "module": "Institute LMS",
+  "custom": 0,
+  "engine": "InnoDB",
+  "autoname": "hash",
+  "field_order": [
+    "customer",
+    "product",
+    "expires_at",
+    "revoked",
+    "reason",
+    "granted_by"
+  ],
+  "fields": [
+    {
+      "fieldname": "customer",
+      "label": "Customer",
+      "fieldtype": "Link",
+      "options": "User"
+    },
+    {
+      "fieldname": "product",
+      "label": "Product",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "expires_at",
+      "label": "Expires At",
+      "fieldtype": "Datetime"
+    },
+    {
+      "fieldname": "revoked",
+      "label": "Revoked",
+      "fieldtype": "Check"
+    },
+    {
+      "fieldname": "reason",
+      "label": "Reason",
+      "fieldtype": "Small Text"
+    },
+    {
+      "fieldname": "granted_by",
+      "label": "Granted By",
+      "fieldtype": "Link",
+      "options": "User"
+    }
+  ],
+  "permissions": []
+}

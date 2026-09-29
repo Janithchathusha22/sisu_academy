@@ -1,0 +1,81 @@
+{
+  "doctype": "DocType",
+  "name": "IL Attendance",
+  "module": "Institute LMS",
+  "custom": 0,
+  "engine": "InnoDB",
+  "autoname": "hash",
+  "field_order": [
+    "institute",
+    "classroom",
+    "session",
+    "student",
+    "attendance_key",
+    "channel",
+    "status",
+    "recorded_at",
+    "recorded_by",
+    "note"
+  ],
+  "fields": [
+    {
+      "fieldname": "institute",
+      "label": "Institute",
+      "fieldtype": "Link",
+      "options": "IL Institute"
+    },
+    {
+      "fieldname": "classroom",
+      "label": "Classroom",
+      "fieldtype": "Link",
+      "options": "IL Classroom"
+    },
+    {
+      "fieldname": "session",
+      "label": "Session",
+      "fieldtype": "Link",
+      "options": "IL Session"
+    },
+    {
+      "fieldname": "student",
+      "label": "Student",
+      "fieldtype": "Link",
+      "options": "IL Member"
+    },
+    {
+      "fieldname": "attendance_key",
+      "label": "Attendance Key",
+      "fieldtype": "Data",
+      "unique": 1
+    },
+    {
+      "fieldname": "channel",
+      "label": "Channel",
+      "fieldtype": "Select",
+      "options": "Physical\nOnline"
+    },
+    {
+      "fieldname": "status",
+      "label": "Status",
+      "fieldtype": "Select",
+      "options": "Present\nAbsent\nExcused"
+    },
+    {
+      "fieldname": "recorded_at",
+      "label": "Recorded At",
+      "fieldtype": "Datetime"
+    },
+    {
+      "fieldname": "recorded_by",
+      "label": "Recorded By",
+      "fieldtype": "Link",
+      "options": "User"
+    },
+    {
+      "fieldname": "note",
+      "label": "Note",
+      "fieldtype": "Small Text"
+    }
+  ],
+  "permissions": []
+}

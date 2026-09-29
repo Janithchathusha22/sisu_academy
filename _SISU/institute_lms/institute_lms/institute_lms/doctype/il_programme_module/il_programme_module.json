@@ -1,0 +1,52 @@
+{
+  "doctype": "DocType",
+  "name": "IL Programme Module",
+  "module": "Institute LMS",
+  "custom": 0,
+  "engine": "InnoDB",
+  "autoname": "hash",
+  "track_changes": 1,
+  "istable": 1,
+  "fields": [
+    {
+      "fieldname": "classroom",
+      "label": "Classroom",
+      "fieldtype": "Link",
+      "options": "IL Classroom",
+      "reqd": 1
+    },
+    {
+      "fieldname": "title",
+      "label": "Title",
+      "fieldtype": "Data",
+      "reqd": 1
+    },
+    {
+      "fieldname": "teacher",
+      "label": "Teacher",
+      "fieldtype": "Link",
+      "options": "IL Member",
+      "reqd": 1
+    },
+    {
+      "fieldname": "duration_weeks",
+      "label": "Duration Weeks",
+      "fieldtype": "Int",
+      "default": 2,
+      "reqd": 1
+    },
+    {
+      "fieldname": "starts_on",
+      "label": "Starts On",
+      "fieldtype": "Date"
+    }
+  ],
+  "field_order": [
+    "classroom",
+    "title",
+    "teacher",
+    "duration_weeks",
+    "starts_on"
+  ],
+  "permissions": []
+}

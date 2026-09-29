@@ -1,0 +1,81 @@
+{
+  "doctype": "DocType",
+  "name": "IL Wallet",
+  "module": "Institute LMS",
+  "custom": 0,
+  "engine": "InnoDB",
+  "autoname": "hash",
+  "field_order": [
+    "identity_key",
+    "owner_user",
+    "beneficiary",
+    "institute",
+    "country",
+    "currency",
+    "available_minor",
+    "held_minor",
+    "enabled"
+  ],
+  "fields": [
+    {
+      "fieldname": "identity_key",
+      "label": "Identity Key",
+      "fieldtype": "Data",
+      "unique": 1,
+      "reqd": 1
+    },
+    {
+      "fieldname": "owner_user",
+      "label": "Owner User",
+      "fieldtype": "Link",
+      "reqd": 1,
+      "options": "User"
+    },
+    {
+      "fieldname": "beneficiary",
+      "label": "Beneficiary",
+      "fieldtype": "Select",
+      "reqd": 1,
+      "options": "Teacher\nInstitute"
+    },
+    {
+      "fieldname": "institute",
+      "label": "Institute",
+      "fieldtype": "Link",
+      "options": "IL Institute"
+    },
+    {
+      "fieldname": "country",
+      "label": "Country",
+      "fieldtype": "Data",
+      "reqd": 1
+    },
+    {
+      "fieldname": "currency",
+      "label": "Currency",
+      "fieldtype": "Select",
+      "reqd": 1,
+      "options": "LKR\nUSD"
+    },
+    {
+      "fieldname": "available_minor",
+      "label": "Available Minor",
+      "fieldtype": "Int",
+      "default": 0
+    },
+    {
+      "fieldname": "held_minor",
+      "label": "Held Minor",
+      "fieldtype": "Int",
+      "default": 0
+    },
+    {
+      "fieldname": "enabled",
+      "label": "Enabled",
+      "fieldtype": "Check",
+      "default": 1
+    }
+  ],
+  "permissions": [],
+  "track_changes": 0
+}

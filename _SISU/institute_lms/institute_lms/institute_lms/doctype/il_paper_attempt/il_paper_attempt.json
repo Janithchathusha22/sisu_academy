@@ -1,0 +1,91 @@
+{
+  "doctype": "DocType",
+  "name": "IL Paper Attempt",
+  "module": "Institute LMS",
+  "custom": 0,
+  "engine": "InnoDB",
+  "autoname": "hash",
+  "field_order": [
+    "paper",
+    "student",
+    "attempt_key",
+    "started_at",
+    "deadline",
+    "status",
+    "answers",
+    "submitted_at",
+    "score",
+    "feedback",
+    "graded_by",
+    "file_id"
+  ],
+  "fields": [
+    {
+      "fieldname": "paper",
+      "label": "Paper",
+      "fieldtype": "Link",
+      "options": "IL Paper"
+    },
+    {
+      "fieldname": "student",
+      "label": "Student",
+      "fieldtype": "Link",
+      "options": "IL Member"
+    },
+    {
+      "fieldname": "attempt_key",
+      "label": "Attempt Key",
+      "fieldtype": "Data",
+      "unique": 1
+    },
+    {
+      "fieldname": "started_at",
+      "label": "Started At",
+      "fieldtype": "Datetime"
+    },
+    {
+      "fieldname": "deadline",
+      "label": "Deadline",
+      "fieldtype": "Datetime"
+    },
+    {
+      "fieldname": "status",
+      "label": "Status",
+      "fieldtype": "Select",
+      "options": "Started\nSubmitted\nGraded"
+    },
+    {
+      "fieldname": "answers",
+      "label": "Answers",
+      "fieldtype": "Long Text"
+    },
+    {
+      "fieldname": "submitted_at",
+      "label": "Submitted At",
+      "fieldtype": "Datetime"
+    },
+    {
+      "fieldname": "score",
+      "label": "Score",
+      "fieldtype": "Int"
+    },
+    {
+      "fieldname": "feedback",
+      "label": "Feedback",
+      "fieldtype": "Small Text"
+    },
+    {
+      "fieldname": "graded_by",
+      "label": "Graded By",
+      "fieldtype": "Link",
+      "options": "User"
+    },
+    {
+      "fieldname": "file_id",
+      "label": "File Id",
+      "fieldtype": "Link",
+      "options": "File"
+    }
+  ],
+  "permissions": []
+}

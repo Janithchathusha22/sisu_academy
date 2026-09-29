@@ -1,0 +1,44 @@
+{
+  "doctype": "DocType",
+  "name": "IL Trial Claim",
+  "module": "Institute LMS",
+  "custom": 0,
+  "engine": "InnoDB",
+  "autoname": "hash",
+  "field_order": [
+    "user",
+    "verified_card_reference",
+    "expires_at",
+    "status"
+  ],
+  "fields": [
+    {
+      "fieldname": "user",
+      "label": "User",
+      "fieldtype": "Link",
+      "unique": 1,
+      "reqd": 1,
+      "options": "User"
+    },
+    {
+      "fieldname": "verified_card_reference",
+      "label": "Verified Card Reference",
+      "fieldtype": "Data",
+      "reqd": 1
+    },
+    {
+      "fieldname": "expires_at",
+      "label": "Expires At",
+      "fieldtype": "Datetime",
+      "reqd": 1
+    },
+    {
+      "fieldname": "status",
+      "label": "Status",
+      "fieldtype": "Select",
+      "default": "Active",
+      "options": "Active\nExpired\nCancelled"
+    }
+  ],
+  "permissions": []
+}

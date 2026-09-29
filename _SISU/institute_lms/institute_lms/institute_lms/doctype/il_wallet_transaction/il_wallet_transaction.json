@@ -1,0 +1,95 @@
+{
+  "doctype": "DocType",
+  "name": "IL Wallet Transaction",
+  "module": "Institute LMS",
+  "custom": 0,
+  "engine": "InnoDB",
+  "autoname": "hash",
+  "field_order": [
+    "wallet",
+    "event_key",
+    "kind",
+    "available_delta",
+    "held_delta",
+    "available_after",
+    "held_after",
+    "invoice",
+    "payout",
+    "reference",
+    "actor",
+    "reason"
+  ],
+  "fields": [
+    {
+      "fieldname": "wallet",
+      "label": "Wallet",
+      "fieldtype": "Link",
+      "reqd": 1,
+      "options": "IL Wallet"
+    },
+    {
+      "fieldname": "event_key",
+      "label": "Event Key",
+      "fieldtype": "Data",
+      "unique": 1,
+      "reqd": 1
+    },
+    {
+      "fieldname": "kind",
+      "label": "Kind",
+      "fieldtype": "Select",
+      "reqd": 1,
+      "options": "Earning\nReserve\nRelease\nPayout\nReversal"
+    },
+    {
+      "fieldname": "available_delta",
+      "label": "Available Delta",
+      "fieldtype": "Int"
+    },
+    {
+      "fieldname": "held_delta",
+      "label": "Held Delta",
+      "fieldtype": "Int"
+    },
+    {
+      "fieldname": "available_after",
+      "label": "Available After",
+      "fieldtype": "Int"
+    },
+    {
+      "fieldname": "held_after",
+      "label": "Held After",
+      "fieldtype": "Int"
+    },
+    {
+      "fieldname": "invoice",
+      "label": "Invoice",
+      "fieldtype": "Link",
+      "options": "IL Invoice"
+    },
+    {
+      "fieldname": "payout",
+      "label": "Payout",
+      "fieldtype": "Link",
+      "options": "IL Payout Request"
+    },
+    {
+      "fieldname": "reference",
+      "label": "Reference",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "actor",
+      "label": "Actor",
+      "fieldtype": "Link",
+      "options": "User"
+    },
+    {
+      "fieldname": "reason",
+      "label": "Reason",
+      "fieldtype": "Small Text"
+    }
+  ],
+  "permissions": [],
+  "track_changes": 0
+}

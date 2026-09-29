@@ -1,0 +1,88 @@
+{
+  "doctype": "DocType",
+  "name": "IL News",
+  "module": "Institute LMS",
+  "custom": 0,
+  "engine": "InnoDB",
+  "autoname": "hash",
+  "field_order": [
+    "institute",
+    "headline",
+    "description",
+    "cta_label",
+    "cta_url",
+    "starts_on",
+    "ends_on",
+    "images",
+    "author"
+  ],
+  "fields": [
+    {
+      "fieldname": "institute",
+      "label": "Institute",
+      "fieldtype": "Link",
+      "options": "IL Institute",
+      "reqd": 1
+    },
+    {
+      "fieldname": "headline",
+      "label": "Headline",
+      "fieldtype": "Small Text",
+      "reqd": 1
+    },
+    {
+      "fieldname": "description",
+      "label": "Description",
+      "fieldtype": "Small Text"
+    },
+    {
+      "fieldname": "cta_label",
+      "label": "Cta Label",
+      "fieldtype": "Small Text"
+    },
+    {
+      "fieldname": "cta_url",
+      "label": "Cta Url",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "starts_on",
+      "label": "Starts On",
+      "fieldtype": "Date",
+      "reqd": 1
+    },
+    {
+      "fieldname": "ends_on",
+      "label": "Ends On",
+      "fieldtype": "Date",
+      "reqd": 1
+    },
+    {
+      "fieldname": "images",
+      "label": "Images",
+      "fieldtype": "Table",
+      "options": "IL News Image"
+    },
+    {
+      "fieldname": "author",
+      "label": "Author",
+      "fieldtype": "Link",
+      "options": "IL Member"
+    }
+  ],
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 0,
+      "report": 1,
+      "export": 1
+    }
+  ],
+  "istable": 0,
+  "track_changes": true,
+  "sort_field": "creation",
+  "sort_order": "DESC"
+}

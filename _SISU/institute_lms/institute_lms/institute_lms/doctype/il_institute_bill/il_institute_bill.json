@@ -1,0 +1,101 @@
+{
+  "doctype": "DocType",
+  "name": "IL Institute Bill",
+  "module": "Institute LMS",
+  "custom": 0,
+  "engine": "InnoDB",
+  "autoname": "hash",
+  "field_order": [
+    "institute",
+    "period",
+    "active_students",
+    "included_students",
+    "extra_students",
+    "unit_rate",
+    "base_fee",
+    "total",
+    "status",
+    "paid_at",
+    "reference"
+  ],
+  "fields": [
+    {
+      "fieldname": "institute",
+      "label": "Institute",
+      "fieldtype": "Link",
+      "options": "IL Institute",
+      "reqd": 1
+    },
+    {
+      "fieldname": "period",
+      "label": "Period",
+      "fieldtype": "Data",
+      "reqd": 1
+    },
+    {
+      "fieldname": "active_students",
+      "label": "Active Students",
+      "fieldtype": "Int"
+    },
+    {
+      "fieldname": "included_students",
+      "label": "Included Students",
+      "fieldtype": "Int",
+      "default": 500
+    },
+    {
+      "fieldname": "extra_students",
+      "label": "Extra Students",
+      "fieldtype": "Int"
+    },
+    {
+      "fieldname": "unit_rate",
+      "label": "Unit Rate",
+      "fieldtype": "Currency",
+      "default": 50
+    },
+    {
+      "fieldname": "base_fee",
+      "label": "Base Fee",
+      "fieldtype": "Currency"
+    },
+    {
+      "fieldname": "total",
+      "label": "Total",
+      "fieldtype": "Currency"
+    },
+    {
+      "fieldname": "status",
+      "label": "Status",
+      "fieldtype": "Select",
+      "options": "Unpaid\nPaid",
+      "reqd": 1,
+      "default": "Unpaid"
+    },
+    {
+      "fieldname": "paid_at",
+      "label": "Paid At",
+      "fieldtype": "Datetime"
+    },
+    {
+      "fieldname": "reference",
+      "label": "Reference",
+      "fieldtype": "Data"
+    }
+  ],
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 0,
+      "report": 1,
+      "export": 1
+    }
+  ],
+  "istable": 0,
+  "track_changes": true,
+  "sort_field": "creation",
+  "sort_order": "DESC"
+}

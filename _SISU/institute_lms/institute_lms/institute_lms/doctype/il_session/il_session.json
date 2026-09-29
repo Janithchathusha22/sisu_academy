@@ -1,0 +1,130 @@
+{
+  "doctype": "DocType",
+  "name": "IL Session",
+  "module": "Institute LMS",
+  "custom": 0,
+  "engine": "InnoDB",
+  "autoname": "hash",
+  "field_order": [
+    "institute",
+    "classroom",
+    "title",
+    "description",
+    "starts_at",
+    "ends_at",
+    "mode",
+    "location",
+    "youtube_id",
+    "youtube_privacy",
+    "status",
+    "comments",
+    "meeting_provider",
+    "meeting_url"
+  ],
+  "fields": [
+    {
+      "fieldname": "institute",
+      "label": "Institute",
+      "fieldtype": "Link",
+      "options": "IL Institute",
+      "reqd": 1
+    },
+    {
+      "fieldname": "classroom",
+      "label": "Classroom",
+      "fieldtype": "Link",
+      "options": "IL Classroom",
+      "reqd": 1
+    },
+    {
+      "fieldname": "title",
+      "label": "Title",
+      "fieldtype": "Small Text",
+      "reqd": 1
+    },
+    {
+      "fieldname": "description",
+      "label": "Description",
+      "fieldtype": "Small Text"
+    },
+    {
+      "fieldname": "starts_at",
+      "label": "Starts At",
+      "fieldtype": "Datetime",
+      "reqd": 1
+    },
+    {
+      "fieldname": "ends_at",
+      "label": "Ends At",
+      "fieldtype": "Datetime",
+      "reqd": 1
+    },
+    {
+      "fieldname": "mode",
+      "label": "Mode",
+      "fieldtype": "Select",
+      "options": "Physical\nOnline",
+      "reqd": 1,
+      "default": "Physical"
+    },
+    {
+      "fieldname": "location",
+      "label": "Location",
+      "fieldtype": "Small Text"
+    },
+    {
+      "fieldname": "youtube_id",
+      "label": "Youtube Id",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "youtube_privacy",
+      "label": "Youtube Privacy",
+      "fieldtype": "Data",
+      "default": "unlisted"
+    },
+    {
+      "fieldname": "status",
+      "label": "Status",
+      "fieldtype": "Select",
+      "options": "Scheduled\nLive\nCompleted\nCancelled",
+      "reqd": 1,
+      "default": "Scheduled"
+    },
+    {
+      "fieldname": "comments",
+      "label": "Comments",
+      "fieldtype": "Select",
+      "options": "Inherit\nEnabled\nDisabled",
+      "reqd": 1,
+      "default": "Inherit"
+    },
+    {
+      "fieldname": "meeting_provider",
+      "label": "Meeting Provider",
+      "fieldtype": "Select",
+      "options": "YouTube\nZoom\nGoogle Meet",
+      "default": "YouTube"
+    },
+    {
+      "fieldname": "meeting_url",
+      "label": "Meeting Url",
+      "fieldtype": "Data"
+    }
+  ],
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 0,
+      "report": 1,
+      "export": 1
+    }
+  ],
+  "istable": 0,
+  "track_changes": true,
+  "sort_field": "creation",
+  "sort_order": "DESC"
+}

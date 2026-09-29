@@ -1,0 +1,199 @@
+{
+  "doctype": "DocType",
+  "name": "IL Invoice",
+  "module": "Institute LMS",
+  "custom": 0,
+  "engine": "InnoDB",
+  "autoname": "hash",
+  "field_order": [
+    "institute",
+    "enrollment",
+    "student",
+    "classroom",
+    "amount",
+    "due_date",
+    "installment",
+    "status",
+    "paid_at",
+    "payment_id",
+    "receipt_number",
+    "gateway_status",
+    "gateway_checkout_id",
+    "gateway_request_key",
+    "gateway_request",
+    "gateway_requested_at",
+    "gateway_mode",
+    "currency",
+    "payout_wallet",
+    "beneficiary_minor",
+    "platform_minor",
+    "pricing_assignment",
+    "billing_month",
+    "billing_key"
+  ],
+  "fields": [
+    {
+      "fieldname": "institute",
+      "label": "Institute",
+      "fieldtype": "Link",
+      "options": "IL Institute",
+      "reqd": 1
+    },
+    {
+      "fieldname": "enrollment",
+      "label": "Enrollment",
+      "fieldtype": "Link",
+      "options": "IL Enrollment",
+      "reqd": 1
+    },
+    {
+      "fieldname": "student",
+      "label": "Student",
+      "fieldtype": "Link",
+      "options": "IL Member",
+      "reqd": 1
+    },
+    {
+      "fieldname": "classroom",
+      "label": "Classroom",
+      "fieldtype": "Link",
+      "options": "IL Classroom",
+      "reqd": 1
+    },
+    {
+      "fieldname": "amount",
+      "label": "Amount",
+      "fieldtype": "Currency",
+      "reqd": 1
+    },
+    {
+      "fieldname": "due_date",
+      "label": "Due Date",
+      "fieldtype": "Date",
+      "reqd": 1
+    },
+    {
+      "fieldname": "installment",
+      "label": "Installment",
+      "fieldtype": "Int"
+    },
+    {
+      "fieldname": "status",
+      "label": "Status",
+      "fieldtype": "Select",
+      "options": "Unpaid\nPaid\nOverdue",
+      "reqd": 1,
+      "default": "Unpaid"
+    },
+    {
+      "fieldname": "paid_at",
+      "label": "Paid At",
+      "fieldtype": "Datetime"
+    },
+    {
+      "fieldname": "payment_id",
+      "label": "Payment Id",
+      "fieldtype": "Data",
+      "unique": 1
+    },
+    {
+      "fieldname": "receipt_number",
+      "label": "Receipt Number",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "gateway_status",
+      "label": "Gateway Status",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "gateway_checkout_id",
+      "label": "Gateway checkout",
+      "fieldtype": "Data",
+      "read_only": 1,
+      "no_copy": 1
+    },
+    {
+      "fieldname": "gateway_request_key",
+      "label": "Gateway idempotency key",
+      "fieldtype": "Data",
+      "read_only": 1,
+      "no_copy": 1
+    },
+    {
+      "fieldname": "gateway_request",
+      "label": "Gateway request snapshot",
+      "fieldtype": "Long Text",
+      "read_only": 1,
+      "no_copy": 1
+    },
+    {
+      "fieldname": "gateway_requested_at",
+      "label": "Gateway request time",
+      "fieldtype": "Datetime",
+      "read_only": 1,
+      "no_copy": 1
+    },
+    {
+      "fieldname": "gateway_mode",
+      "label": "Gateway mode",
+      "fieldtype": "Data",
+      "read_only": 1,
+      "no_copy": 1
+    },
+    {
+      "fieldname": "currency",
+      "fieldtype": "Data",
+      "label": "Currency"
+    },
+    {
+      "fieldname": "payout_wallet",
+      "fieldtype": "Link",
+      "label": "Payout Wallet",
+      "options": "IL Wallet"
+    },
+    {
+      "fieldname": "beneficiary_minor",
+      "fieldtype": "Int",
+      "label": "Beneficiary Minor"
+    },
+    {
+      "fieldname": "platform_minor",
+      "fieldtype": "Int",
+      "label": "Platform Minor"
+    },
+    {
+      "fieldname": "pricing_assignment",
+      "fieldtype": "Link",
+      "label": "Pricing Assignment",
+      "options": "IL Price Assignment",
+      "read_only": 1
+    },
+    {
+      "fieldname": "billing_month",
+      "label": "Billing Month",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "billing_key",
+      "label": "Billing Key",
+      "fieldtype": "Data",
+      "unique": 1
+    }
+  ],
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 0,
+      "report": 1,
+      "export": 1
+    }
+  ],
+  "istable": 0,
+  "track_changes": true,
+  "sort_field": "creation",
+  "sort_order": "DESC"
+}

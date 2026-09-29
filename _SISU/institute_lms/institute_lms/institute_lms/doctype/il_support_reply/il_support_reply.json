@@ -1,0 +1,33 @@
+{
+  "doctype": "DocType",
+  "name": "IL Support Reply",
+  "module": "Institute LMS",
+  "custom": 0,
+  "engine": "InnoDB",
+  "autoname": "hash",
+  "field_order": [
+    "ticket",
+    "author_user",
+    "body"
+  ],
+  "fields": [
+    {
+      "fieldname": "ticket",
+      "label": "Ticket",
+      "fieldtype": "Link",
+      "options": "IL Support Ticket"
+    },
+    {
+      "fieldname": "author_user",
+      "label": "Author User",
+      "fieldtype": "Link",
+      "options": "User"
+    },
+    {
+      "fieldname": "body",
+      "label": "Body",
+      "fieldtype": "Small Text"
+    }
+  ],
+  "permissions": []
+}

@@ -1,0 +1,53 @@
+{
+  "doctype": "DocType",
+  "name": "IL Programme Enrollment",
+  "module": "Institute LMS",
+  "custom": 0,
+  "engine": "InnoDB",
+  "autoname": "hash",
+  "track_changes": 1,
+  "istable": 0,
+  "fields": [
+    {
+      "fieldname": "programme",
+      "label": "Programme",
+      "fieldtype": "Link",
+      "options": "IL Programme",
+      "reqd": 1
+    },
+    {
+      "fieldname": "student",
+      "label": "Student",
+      "fieldtype": "Link",
+      "options": "IL Member",
+      "reqd": 1
+    },
+    {
+      "fieldname": "billing_enrollment",
+      "label": "Billing Enrollment",
+      "fieldtype": "Link",
+      "options": "IL Enrollment"
+    },
+    {
+      "fieldname": "active",
+      "label": "Active",
+      "fieldtype": "Check",
+      "default": 1
+    }
+  ],
+  "field_order": [
+    "programme",
+    "student",
+    "billing_enrollment",
+    "active"
+  ],
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 0
+    }
+  ]
+}

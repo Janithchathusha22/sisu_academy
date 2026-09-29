@@ -1,0 +1,69 @@
+{
+  "doctype": "DocType",
+  "name": "IL Access Audit",
+  "module": "Institute LMS",
+  "custom": 0,
+  "engine": "InnoDB",
+  "autoname": "hash",
+  "field_order": [
+    "institute",
+    "enrollment",
+    "actor",
+    "before_state",
+    "after_state",
+    "reason"
+  ],
+  "fields": [
+    {
+      "fieldname": "institute",
+      "label": "Institute",
+      "fieldtype": "Link",
+      "options": "IL Institute",
+      "reqd": 1
+    },
+    {
+      "fieldname": "enrollment",
+      "label": "Enrollment",
+      "fieldtype": "Link",
+      "options": "IL Enrollment",
+      "reqd": 1
+    },
+    {
+      "fieldname": "actor",
+      "label": "Actor",
+      "fieldtype": "Link",
+      "options": "User",
+      "reqd": 1
+    },
+    {
+      "fieldname": "before_state",
+      "label": "Before State",
+      "fieldtype": "Small Text"
+    },
+    {
+      "fieldname": "after_state",
+      "label": "After State",
+      "fieldtype": "Small Text"
+    },
+    {
+      "fieldname": "reason",
+      "label": "Reason",
+      "fieldtype": "Small Text"
+    }
+  ],
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 0,
+      "report": 1,
+      "export": 1
+    }
+  ],
+  "istable": 0,
+  "track_changes": true,
+  "sort_field": "creation",
+  "sort_order": "DESC"
+}

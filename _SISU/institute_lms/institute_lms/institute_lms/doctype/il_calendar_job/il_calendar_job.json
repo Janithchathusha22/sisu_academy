@@ -1,0 +1,92 @@
+{
+  "doctype": "DocType",
+  "name": "IL Calendar Job",
+  "module": "Institute LMS",
+  "custom": 0,
+  "engine": "InnoDB",
+  "autoname": "field:event_key",
+  "field_order": [
+    "institute",
+    "member",
+    "event_key",
+    "session",
+    "connection",
+    "status",
+    "attempts",
+    "next_attempt",
+    "last_error"
+  ],
+  "fields": [
+    {
+      "fieldname": "institute",
+      "label": "Institute",
+      "fieldtype": "Link",
+      "options": "IL Institute",
+      "reqd": 1
+    },
+    {
+      "fieldname": "member",
+      "label": "Member",
+      "fieldtype": "Link",
+      "options": "IL Member",
+      "reqd": 1
+    },
+    {
+      "fieldname": "event_key",
+      "label": "Event Key",
+      "fieldtype": "Data",
+      "unique": 1,
+      "reqd": 1
+    },
+    {
+      "fieldname": "session",
+      "label": "Session",
+      "fieldtype": "Link",
+      "options": "IL Session",
+      "reqd": 1
+    },
+    {
+      "fieldname": "connection",
+      "label": "Connection",
+      "fieldtype": "Link",
+      "options": "IL Calendar Connection",
+      "reqd": 1
+    },
+    {
+      "fieldname": "status",
+      "label": "Status",
+      "fieldtype": "Select",
+      "options": "Pending\nSynced\nSkipped\nReview",
+      "default": "Pending"
+    },
+    {
+      "fieldname": "attempts",
+      "label": "Attempts",
+      "fieldtype": "Int",
+      "default": 0
+    },
+    {
+      "fieldname": "next_attempt",
+      "label": "Next Attempt",
+      "fieldtype": "Datetime"
+    },
+    {
+      "fieldname": "last_error",
+      "label": "Last Error",
+      "fieldtype": "Small Text"
+    }
+  ],
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "write": 1,
+      "create": 0,
+      "delete": 0,
+      "report": 1
+    }
+  ],
+  "track_changes": false,
+  "sort_field": "modified",
+  "sort_order": "ASC"
+}

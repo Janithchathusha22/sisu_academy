@@ -1,0 +1,40 @@
+{
+  "doctype": "DocType",
+  "name": "IL SOUL Settings",
+  "module": "Institute LMS",
+  "custom": 0,
+  "issingle": 1,
+  "engine": "InnoDB",
+  "field_order": [
+    "enabled",
+    "api_key",
+    "model"
+  ],
+  "fields": [
+    {
+      "fieldname": "enabled",
+      "label": "Enable OpenAI chat",
+      "fieldtype": "Check",
+      "default": "0"
+    },
+    {
+      "fieldname": "api_key",
+      "label": "OpenAI API key",
+      "fieldtype": "Password"
+    },
+    {
+      "fieldname": "model",
+      "label": "Model",
+      "fieldtype": "Data",
+      "default": "gpt-4.1-mini"
+    }
+  ],
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "write": 1
+    }
+  ],
+  "track_changes": false
+}

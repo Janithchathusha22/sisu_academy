@@ -1,0 +1,115 @@
+{
+  "doctype": "DocType",
+  "name": "IL Private Contact",
+  "module": "Institute LMS",
+  "custom": 0,
+  "engine": "InnoDB",
+  "autoname": "hash",
+  "field_order": [
+    "user",
+    "date_of_birth",
+    "gender",
+    "gender_description",
+    "contact_phone",
+    "city",
+    "address",
+    "guardian_name",
+    "guardian_relationship",
+    "guardian_phone",
+    "guardian_email",
+    "guardian_permission",
+    "whatsapp_phone",
+    "whatsapp_opt_in",
+    "notification_language",
+    "consent_at"
+  ],
+  "fields": [
+    {
+      "fieldname": "user",
+      "label": "User",
+      "fieldtype": "Link",
+      "options": "User",
+      "unique": 1,
+      "reqd": 1
+    },
+    {
+      "fieldname": "date_of_birth",
+      "label": "Date Of Birth",
+      "fieldtype": "Date"
+    },
+    {
+      "fieldname": "gender",
+      "label": "Gender",
+      "fieldtype": "Select",
+      "options": "\nFemale\nMale\nNon-binary\nSelf-described\nPrefer not to say"
+    },
+    {
+      "fieldname": "gender_description",
+      "label": "Gender Description",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "contact_phone",
+      "label": "Contact Phone",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "city",
+      "label": "City",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "address",
+      "label": "Address",
+      "fieldtype": "Small Text"
+    },
+    {
+      "fieldname": "guardian_name",
+      "label": "Guardian Name",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "guardian_relationship",
+      "label": "Guardian Relationship",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "guardian_phone",
+      "label": "Guardian Phone",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "guardian_email",
+      "label": "Guardian Email",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "guardian_permission",
+      "label": "Guardian Permission",
+      "fieldtype": "Check"
+    },
+    {
+      "fieldname": "whatsapp_phone",
+      "label": "Whatsapp Phone",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "whatsapp_opt_in",
+      "label": "Whatsapp Opt In",
+      "fieldtype": "Check"
+    },
+    {
+      "fieldname": "notification_language",
+      "label": "Notification Language",
+      "fieldtype": "Select",
+      "options": "en\nsi\nta",
+      "default": "en"
+    },
+    {
+      "fieldname": "consent_at",
+      "label": "Consent At",
+      "fieldtype": "Datetime"
+    }
+  ],
+  "permissions": []
+}

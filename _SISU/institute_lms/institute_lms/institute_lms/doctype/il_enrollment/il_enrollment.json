@@ -1,0 +1,92 @@
+{
+  "doctype": "DocType",
+  "name": "IL Enrollment",
+  "module": "Institute LMS",
+  "custom": 0,
+  "engine": "InnoDB",
+  "autoname": "hash",
+  "field_order": [
+    "institute",
+    "classroom",
+    "student",
+    "fee",
+    "active",
+    "access_override",
+    "grace_until",
+    "override_reason",
+    "programme_enrollment"
+  ],
+  "fields": [
+    {
+      "fieldname": "institute",
+      "label": "Institute",
+      "fieldtype": "Link",
+      "options": "IL Institute",
+      "reqd": 1
+    },
+    {
+      "fieldname": "classroom",
+      "label": "Classroom",
+      "fieldtype": "Link",
+      "options": "IL Classroom",
+      "reqd": 1
+    },
+    {
+      "fieldname": "student",
+      "label": "Student",
+      "fieldtype": "Link",
+      "options": "IL Member",
+      "reqd": 1
+    },
+    {
+      "fieldname": "fee",
+      "label": "Fee",
+      "fieldtype": "Currency"
+    },
+    {
+      "fieldname": "active",
+      "label": "Active",
+      "fieldtype": "Check",
+      "default": 1
+    },
+    {
+      "fieldname": "access_override",
+      "label": "Access Override",
+      "fieldtype": "Select",
+      "options": "Automatic\nOpen\nClosed",
+      "reqd": 1,
+      "default": "Automatic"
+    },
+    {
+      "fieldname": "grace_until",
+      "label": "Grace Until",
+      "fieldtype": "Date"
+    },
+    {
+      "fieldname": "override_reason",
+      "label": "Override Reason",
+      "fieldtype": "Small Text"
+    },
+    {
+      "fieldname": "programme_enrollment",
+      "label": "Programme Enrollment",
+      "fieldtype": "Link",
+      "options": "IL Programme Enrollment"
+    }
+  ],
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 0,
+      "report": 1,
+      "export": 1
+    }
+  ],
+  "istable": 0,
+  "track_changes": true,
+  "sort_field": "creation",
+  "sort_order": "DESC"
+}

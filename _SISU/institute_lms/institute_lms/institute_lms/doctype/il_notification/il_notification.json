@@ -1,0 +1,98 @@
+{
+  "doctype": "DocType",
+  "name": "IL Notification",
+  "module": "Institute LMS",
+  "custom": 0,
+  "engine": "InnoDB",
+  "autoname": "hash",
+  "field_order": [
+    "institute",
+    "recipient",
+    "event_key",
+    "body",
+    "status",
+    "attempts",
+    "next_attempt",
+    "provider_id",
+    "last_error",
+    "channel"
+  ],
+  "fields": [
+    {
+      "fieldname": "institute",
+      "label": "Institute",
+      "fieldtype": "Link",
+      "options": "IL Institute",
+      "reqd": 1
+    },
+    {
+      "fieldname": "recipient",
+      "label": "Recipient",
+      "fieldtype": "Link",
+      "options": "IL Member",
+      "reqd": 1
+    },
+    {
+      "fieldname": "event_key",
+      "label": "Event Key",
+      "fieldtype": "Data",
+      "unique": 1
+    },
+    {
+      "fieldname": "body",
+      "label": "Body",
+      "fieldtype": "Small Text"
+    },
+    {
+      "fieldname": "status",
+      "label": "Status",
+      "fieldtype": "Select",
+      "options": "Queued\nAccepted\nFailed\nSkipped\nReview",
+      "reqd": 1,
+      "default": "Queued"
+    },
+    {
+      "fieldname": "attempts",
+      "label": "Attempts",
+      "fieldtype": "Int"
+    },
+    {
+      "fieldname": "next_attempt",
+      "label": "Next Attempt",
+      "fieldtype": "Datetime"
+    },
+    {
+      "fieldname": "provider_id",
+      "label": "Provider Id",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "last_error",
+      "label": "Last Error",
+      "fieldtype": "Small Text"
+    },
+    {
+      "fieldname": "channel",
+      "label": "Channel",
+      "fieldtype": "Select",
+      "options": "WhatsApp\nEmail",
+      "default": "WhatsApp",
+      "reqd": 1
+    }
+  ],
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 0,
+      "report": 1,
+      "export": 1
+    }
+  ],
+  "istable": 0,
+  "track_changes": true,
+  "sort_field": "creation",
+  "sort_order": "DESC"
+}

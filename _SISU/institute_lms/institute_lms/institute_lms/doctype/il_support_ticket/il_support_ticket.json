@@ -1,0 +1,47 @@
+{
+  "doctype": "DocType",
+  "name": "IL Support Ticket",
+  "module": "Institute LMS",
+  "custom": 0,
+  "engine": "InnoDB",
+  "autoname": "hash",
+  "field_order": [
+    "institute",
+    "requester",
+    "subject",
+    "status",
+    "category"
+  ],
+  "fields": [
+    {
+      "fieldname": "institute",
+      "label": "Institute",
+      "fieldtype": "Link",
+      "options": "IL Institute"
+    },
+    {
+      "fieldname": "requester",
+      "label": "Requester",
+      "fieldtype": "Link",
+      "options": "User"
+    },
+    {
+      "fieldname": "subject",
+      "label": "Subject",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "status",
+      "label": "Status",
+      "fieldtype": "Select",
+      "options": "Open\nIn progress\nResolved"
+    },
+    {
+      "fieldname": "category",
+      "label": "Category",
+      "fieldtype": "Select",
+      "options": "Account\nPayment\nClassroom\nTechnical\nOther"
+    }
+  ],
+  "permissions": []
+}

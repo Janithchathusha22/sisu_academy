@@ -1,0 +1,117 @@
+{
+  "doctype": "DocType",
+  "name": "IL Member",
+  "module": "Institute LMS",
+  "custom": 0,
+  "engine": "InnoDB",
+  "autoname": "hash",
+  "field_order": [
+    "institute",
+    "user",
+    "role",
+    "full_name",
+    "phone",
+    "whatsapp_opt_in",
+    "language",
+    "active",
+    "soul_ai_enabled",
+    "contact_email",
+    "contact_email_verified",
+    "email_opt_in"
+  ],
+  "fields": [
+    {
+      "fieldname": "institute",
+      "label": "Institute",
+      "fieldtype": "Link",
+      "options": "IL Institute",
+      "reqd": 1
+    },
+    {
+      "fieldname": "user",
+      "label": "User",
+      "fieldtype": "Link",
+      "options": "User",
+      "reqd": 1
+    },
+    {
+      "fieldname": "role",
+      "label": "Role",
+      "fieldtype": "Select",
+      "options": "Student\nTeacher\nAdmin",
+      "reqd": 1,
+      "default": "Student"
+    },
+    {
+      "fieldname": "full_name",
+      "label": "Full Name",
+      "fieldtype": "Small Text",
+      "reqd": 1
+    },
+    {
+      "fieldname": "phone",
+      "label": "Phone",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "whatsapp_opt_in",
+      "label": "Whatsapp Opt In",
+      "fieldtype": "Check"
+    },
+    {
+      "fieldname": "language",
+      "label": "Language",
+      "fieldtype": "Select",
+      "options": "en\nsi\nta",
+      "reqd": 1,
+      "default": "en"
+    },
+    {
+      "fieldname": "active",
+      "label": "Active",
+      "fieldtype": "Check",
+      "default": 1
+    },
+    {
+      "fieldname": "soul_ai_enabled",
+      "label": "SOUL AI eligibility reviewed",
+      "fieldtype": "Check",
+      "default": "0",
+      "description": "Enable only after age, consent and child-safety review. Requires site-level student review and Zero Data Retention verification."
+    },
+    {
+      "fieldname": "contact_email",
+      "label": "Verified contact email",
+      "fieldtype": "Data",
+      "read_only": 1
+    },
+    {
+      "fieldname": "contact_email_verified",
+      "label": "Email verified",
+      "fieldtype": "Check",
+      "default": 0,
+      "read_only": 1
+    },
+    {
+      "fieldname": "email_opt_in",
+      "label": "Email class updates",
+      "fieldtype": "Check",
+      "default": 0
+    }
+  ],
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 0,
+      "report": 1,
+      "export": 1
+    }
+  ],
+  "istable": 0,
+  "track_changes": true,
+  "sort_field": "creation",
+  "sort_order": "DESC"
+}

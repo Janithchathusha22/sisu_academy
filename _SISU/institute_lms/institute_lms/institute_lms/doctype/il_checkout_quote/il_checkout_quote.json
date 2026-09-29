@@ -1,0 +1,70 @@
+{
+  "doctype": "DocType",
+  "name": "IL Checkout Quote",
+  "module": "Institute LMS",
+  "custom": 0,
+  "engine": "InnoDB",
+  "autoname": "hash",
+  "field_order": [
+    "customer",
+    "assignment",
+    "product",
+    "currency",
+    "period",
+    "total_minor",
+    "breakdown",
+    "expires_at",
+    "status"
+  ],
+  "fields": [
+    {
+      "fieldname": "customer",
+      "label": "Customer",
+      "fieldtype": "Link",
+      "options": "User"
+    },
+    {
+      "fieldname": "assignment",
+      "label": "Assignment",
+      "fieldtype": "Link",
+      "options": "IL Price Assignment"
+    },
+    {
+      "fieldname": "product",
+      "label": "Product",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "currency",
+      "label": "Currency",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "period",
+      "label": "Period",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "total_minor",
+      "label": "Total Minor",
+      "fieldtype": "Int"
+    },
+    {
+      "fieldname": "breakdown",
+      "label": "Breakdown",
+      "fieldtype": "Long Text"
+    },
+    {
+      "fieldname": "expires_at",
+      "label": "Expires At",
+      "fieldtype": "Datetime"
+    },
+    {
+      "fieldname": "status",
+      "label": "Status",
+      "fieldtype": "Select",
+      "options": "Open\nSettled\nExpired"
+    }
+  ],
+  "permissions": []
+}

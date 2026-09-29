@@ -1,0 +1,48 @@
+{
+  "doctype": "DocType",
+  "name": "IL Provider Update",
+  "module": "Institute LMS",
+  "autoname": "hash",
+  "engine": "InnoDB",
+  "field_order": [
+    "profile",
+    "headline",
+    "body",
+    "url",
+    "expires_at"
+  ],
+  "fields": [
+    {
+      "fieldname": "profile",
+      "fieldtype": "Link",
+      "label": "Profile",
+      "options": "IL Public Profile",
+      "reqd": 1
+    },
+    {
+      "fieldname": "headline",
+      "fieldtype": "Data",
+      "label": "Headline",
+      "length": 80,
+      "reqd": 1
+    },
+    {
+      "fieldname": "body",
+      "fieldtype": "Small Text",
+      "label": "Body",
+      "reqd": 1
+    },
+    {
+      "fieldname": "url",
+      "fieldtype": "Small Text",
+      "label": "Url"
+    },
+    {
+      "fieldname": "expires_at",
+      "fieldtype": "Datetime",
+      "label": "Expires At",
+      "reqd": 1
+    }
+  ],
+  "permissions": []
+}

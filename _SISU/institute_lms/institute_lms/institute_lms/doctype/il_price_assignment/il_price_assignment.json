@@ -1,0 +1,101 @@
+{
+  "doctype": "DocType",
+  "name": "IL Price Assignment",
+  "module": "Institute LMS",
+  "custom": 0,
+  "engine": "InnoDB",
+  "autoname": "hash",
+  "field_order": [
+    "customer",
+    "customer_kind",
+    "institute",
+    "product",
+    "currency",
+    "period",
+    "base_minor",
+    "included_units",
+    "unit_minor",
+    "discount_bps",
+    "tax_bps",
+    "active",
+    "reason",
+    "assigned_by"
+  ],
+  "fields": [
+    {
+      "fieldname": "customer",
+      "label": "Customer",
+      "fieldtype": "Link",
+      "options": "User"
+    },
+    {
+      "fieldname": "customer_kind",
+      "label": "Customer Kind",
+      "fieldtype": "Select",
+      "options": "Institute\nTeacher\nStudent"
+    },
+    {
+      "fieldname": "institute",
+      "label": "Institute",
+      "fieldtype": "Link",
+      "options": "IL Institute"
+    },
+    {
+      "fieldname": "product",
+      "label": "Product",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "currency",
+      "label": "Currency",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "period",
+      "label": "Period",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "base_minor",
+      "label": "Base Minor",
+      "fieldtype": "Int"
+    },
+    {
+      "fieldname": "included_units",
+      "label": "Included Units",
+      "fieldtype": "Int"
+    },
+    {
+      "fieldname": "unit_minor",
+      "label": "Unit Minor",
+      "fieldtype": "Int"
+    },
+    {
+      "fieldname": "discount_bps",
+      "label": "Discount Bps",
+      "fieldtype": "Int"
+    },
+    {
+      "fieldname": "tax_bps",
+      "label": "Tax Bps",
+      "fieldtype": "Int"
+    },
+    {
+      "fieldname": "active",
+      "label": "Active",
+      "fieldtype": "Check"
+    },
+    {
+      "fieldname": "reason",
+      "label": "Reason",
+      "fieldtype": "Small Text"
+    },
+    {
+      "fieldname": "assigned_by",
+      "label": "Assigned By",
+      "fieldtype": "Link",
+      "options": "User"
+    }
+  ],
+  "permissions": []
+}

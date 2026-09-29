@@ -1,0 +1,86 @@
+{
+  "doctype": "DocType",
+  "name": "IL Payout Method",
+  "module": "Institute LMS",
+  "custom": 0,
+  "engine": "InnoDB",
+  "autoname": "hash",
+  "field_order": [
+    "wallet",
+    "kind",
+    "country",
+    "masked_label",
+    "secret_details",
+    "status",
+    "submitted_by",
+    "reviewed_by",
+    "reviewed_at",
+    "review_reason"
+  ],
+  "fields": [
+    {
+      "fieldname": "wallet",
+      "label": "Wallet",
+      "fieldtype": "Link",
+      "reqd": 1,
+      "options": "IL Wallet"
+    },
+    {
+      "fieldname": "kind",
+      "label": "Kind",
+      "fieldtype": "Select",
+      "reqd": 1,
+      "options": "Local Bank\nWise\nPayoneer\nSWIFT / IBAN"
+    },
+    {
+      "fieldname": "country",
+      "label": "Country",
+      "fieldtype": "Data",
+      "reqd": 1
+    },
+    {
+      "fieldname": "masked_label",
+      "label": "Masked Label",
+      "fieldtype": "Data",
+      "reqd": 1
+    },
+    {
+      "fieldname": "secret_details",
+      "label": "Secret Details",
+      "fieldtype": "Password",
+      "length": 2048,
+      "reqd": 1
+    },
+    {
+      "fieldname": "status",
+      "label": "Status",
+      "fieldtype": "Select",
+      "default": "Pending",
+      "options": "Pending\nApproved\nRejected\nSuperseded"
+    },
+    {
+      "fieldname": "submitted_by",
+      "label": "Submitted By",
+      "fieldtype": "Link",
+      "options": "User"
+    },
+    {
+      "fieldname": "reviewed_by",
+      "label": "Reviewed By",
+      "fieldtype": "Link",
+      "options": "User"
+    },
+    {
+      "fieldname": "reviewed_at",
+      "label": "Reviewed At",
+      "fieldtype": "Datetime"
+    },
+    {
+      "fieldname": "review_reason",
+      "label": "Review Reason",
+      "fieldtype": "Small Text"
+    }
+  ],
+  "permissions": [],
+  "track_changes": 0
+}

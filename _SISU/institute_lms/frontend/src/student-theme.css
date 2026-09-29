@@ -1,0 +1,42 @@
+/* Personal light/dark appearance layer shared by all dashboard roles. */
+.app-shell[data-student-theme]{--student-bg:#f5f0fc;--student-card:#fefcff;--student-ink:#49385f;--student-muted:#786788;--student-border:#e7dcf3;--student-soft:#eee4fa;background:var(--student-bg);color:var(--student-ink);min-height:100vh}
+.app-shell[data-student-theme=dark]{color-scheme:dark;--student-bg:#201c26;--student-card:#2c2633;--student-ink:#ede1eb;--student-muted:#c0afc1;--student-border:#4b3d51;--student-soft:#3b3044;--brand:var(--student-accent)!important}
+.app-shell[data-student-theme] .workspace,.app-shell[data-student-theme] main{background:var(--student-bg)}
+.app-shell[data-student-theme] :is(.sidebar,.topbar,.panel,.room-card,.provider-card,.settings-grid>section,.profile-menu,.locale-menu,.student-provider-filter){background:var(--student-card);border-color:var(--student-border);color:var(--student-ink)}
+.app-shell[data-student-theme] :is(h1,h2,h3,h4,.section-heading h2,.room-title,.wordmark){color:var(--student-ink)}
+.app-shell[data-student-theme] :is(p,small,.field-help,.eyebrow,.nav-label,.breadcrumb,.teacher-line,.main-footer){color:var(--student-muted)}
+.app-shell[data-student-theme] .button.primary{background:var(--student-accent);color:#fff;border-color:transparent}
+.app-shell[data-student-theme=dark] .button.primary{color:#271b30}
+.app-shell[data-student-theme] :is(.button.subtle,.help-card,.preview-bar,.institute-switch,.tabs button.selected,.search,.avatar,.badge.violet){background:var(--student-soft);border-color:var(--student-border);color:var(--student-ink)}
+.app-shell[data-student-theme] nav button.active{background:var(--student-soft);color:var(--student-accent);border-color:var(--student-accent)}
+.app-shell[data-student-theme] nav button,.app-shell[data-student-theme] .settings-nav{color:var(--student-muted)}
+.app-shell[data-student-theme] .text-button{color:var(--student-accent)}
+.app-shell[data-student-theme=dark] :is(input,textarea,select){background:#302737;color:var(--student-ink);border-color:var(--student-border)}
+.app-shell[data-student-theme=dark] :is(table,th,td,.notice-item,.material-item){color:var(--student-ink);border-color:var(--student-border)}
+.app-shell[data-student-theme=dark] :is(.hero,.campus-strip,.exam-card,.quiz-upgrade,.plan-card.featured,.pricing-summary,.student-home-hero){background:linear-gradient(120deg,#3d3047,#303638);color:var(--student-ink)}
+.app-shell[data-student-theme=dark] :is(.hero p,.hero-label,.exam-card p,.exam-card strong,.countdown,.student-home-hero p){color:var(--student-ink)}
+.app-shell[data-student-theme=dark] .soul-chat{background:#2e2735;border-color:#4d3c57}.app-shell[data-student-theme=dark] .soul-chat>header{background:linear-gradient(115deg,#403147,#303b36);border-color:#514459}.app-shell[data-student-theme=dark] :is(.soul-chat h2,.soul-welcome h3,.soul-welcome p,.soul-chat header small){color:#e5d5e9}.app-shell[data-student-theme=dark] :is(.soul-context,.soul-message,.soul-compose,.soul-shortcuts button,.soul-bubble){background:#3a2f42;color:#dfcfe5;border-color:#54415e}.app-shell[data-student-theme=dark] .soul-compose textarea{color:#eee1f1}.app-shell[data-student-theme=dark] .soul-chat-footer{border-color:#53425b}.app-shell[data-student-theme=dark] .soul-bubble strong{color:#dec7ed}
+.profile-cozy-prompt{display:flex;align-items:center;gap:13px;background:var(--student-card,#fffaf6);border:1px solid var(--student-border,#e7dce6);padding:18px 22px;border-radius:17px;margin-bottom:22px;font-size:12px}.profile-cozy-prompt>div{flex:1}.profile-cozy-prompt strong{display:block;margin-bottom:5px}.profile-cozy-prompt p{font-size:11px;margin:0}@media(max-width:600px){.profile-cozy-prompt{flex-wrap:wrap}}
+/* Keep high-contrast text and calm surfaces across student screens. */
+.app-shell[data-student-theme=dark]{--ink:var(--student-ink);--muted:var(--student-muted);--line:var(--student-border);--violet:#413449;--peach:#49353b;--mint:#30433d}
+.app-shell[data-student-theme=dark] :is(.learning-spaces>button,.count-pill,.modal,.detail-content,.day-agenda,.full-calendar>button,.tabs,.detail-tabs){background:var(--student-card);border-color:var(--student-border);color:var(--student-ink)}
+.app-shell[data-student-theme=dark] .learning-spaces>button.chosen{background:var(--student-soft);border-color:var(--student-accent)}
+.app-shell[data-student-theme=dark] :is(.learning-spaces small,.category-meter span,.countdown span,.breadcrumb strong){color:var(--student-muted)}
+.app-shell[data-student-theme=dark] .student-class-cover{background:#413449!important;color:#e7d2ed}
+.app-shell[data-student-theme=dark] .student-class-cover.peach{background:#49353b!important;color:#edcfbe}
+.app-shell[data-student-theme=dark] .student-class-cover.mint{background:#30433d!important;color:#c8dfcc}
+.app-shell[data-student-theme=dark] :is(.badge.white,.space-symbol){color:#514057}
+.app-shell[data-student-theme=dark] :is(.room-card-footer,.home-agenda,.balance-row){border-color:var(--student-border)}
+.app-shell[data-student-theme=dark] .meter-track{background:#4c3f55}
+.app-shell[data-student-theme=dark] .detail-hero{background:linear-gradient(120deg,#413449,#30433d);color:var(--student-ink)}
+.app-shell[data-student-theme] .study-space :is(p,small){color:var(--study-muted)}
+.app-shell[data-student-theme] .study-space :is(.study-clock-caption,.study-status){color:inherit}
+.app-shell[data-student-theme] .study-space .study-timer-content input{background:transparent;color:inherit}
+.app-shell[data-student-theme] .study-space :is(h1,h2,h3){color:var(--study-ink)}
+/* Staff dashboards and shared teaching surfaces follow the same theme. */
+.app-shell[data-student-theme] :is(.insight-stats>button,.insight-stats>div,.video-teaser,.campaign-card,.lead-board article){background:var(--student-card);border-color:var(--student-border);color:var(--student-ink)}
+.app-shell[data-student-theme=dark] :is(.insight-hero,.challenge-card,.challenge-banner,.owner-banner){background:linear-gradient(120deg,#413449,#303b38);color:var(--student-ink)}
+.app-shell[data-student-theme=dark] :is(.podium-mini>span,.revenue-track,.owner-chart>div>div,.lead-board>div,.quiz-question-editor,.lesson-quiz,.issued-invite){background:var(--student-soft);border-color:var(--student-border);color:var(--student-ink)}
+.app-shell[data-student-theme=dark] :is(.insight-stats strong,.learning-spaces b,.campaign-counts b,.room-metric,.lesson-quiz legend,.issued-invite code){color:var(--student-ink)}
+.app-shell[data-student-theme=dark] :is(.teacher-metric,.revenue-foot,.campaign-counts,.owner-money){border-color:var(--student-border)}
+.app-shell[data-student-theme=dark] :is(.hero-label,.podium-mini b,.exam-tag){color:var(--student-accent)}

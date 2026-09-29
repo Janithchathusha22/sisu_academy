@@ -1,0 +1,74 @@
+{
+  "doctype": "DocType",
+  "name": "IL Calendar Connection",
+  "module": "Institute LMS",
+  "custom": 0,
+  "engine": "InnoDB",
+  "autoname": "hash",
+  "field_order": [
+    "institute",
+    "member",
+    "google_email",
+    "calendar_id",
+    "refresh_token",
+    "status",
+    "last_synced"
+  ],
+  "fields": [
+    {
+      "fieldname": "institute",
+      "label": "Institute",
+      "fieldtype": "Link",
+      "options": "IL Institute",
+      "reqd": 1
+    },
+    {
+      "fieldname": "member",
+      "label": "Member",
+      "fieldtype": "Link",
+      "options": "IL Member",
+      "reqd": 1,
+      "unique": 1
+    },
+    {
+      "fieldname": "google_email",
+      "label": "Google Email",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "calendar_id",
+      "label": "Calendar Id",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "refresh_token",
+      "label": "Refresh Token",
+      "fieldtype": "Password"
+    },
+    {
+      "fieldname": "status",
+      "label": "Status",
+      "fieldtype": "Select",
+      "options": "Disconnected\nConnected\nReview",
+      "default": "Disconnected"
+    },
+    {
+      "fieldname": "last_synced",
+      "label": "Last Synced",
+      "fieldtype": "Datetime"
+    }
+  ],
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "write": 1,
+      "create": 0,
+      "delete": 0,
+      "report": 1
+    }
+  ],
+  "track_changes": false,
+  "sort_field": "modified",
+  "sort_order": "ASC"
+}

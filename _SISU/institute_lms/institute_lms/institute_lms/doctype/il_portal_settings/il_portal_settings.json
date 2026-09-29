@@ -1,0 +1,39 @@
+{
+  "doctype": "DocType",
+  "name": "IL Portal Settings",
+  "module": "Institute LMS",
+  "issingle": 1,
+  "custom": 0,
+  "track_changes": 1,
+  "engine": "InnoDB",
+  "field_order": [
+    "privacy_policy_url",
+    "privacy_policy_version",
+    "provider_applications_enabled"
+  ],
+  "fields": [
+    {
+      "fieldname": "privacy_policy_url",
+      "label": "Privacy policy URL",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "privacy_policy_version",
+      "label": "Policy version",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "provider_applications_enabled",
+      "label": "Accept provider applications",
+      "fieldtype": "Check",
+      "default": "0"
+    }
+  ],
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "write": 1
+    }
+  ]
+}

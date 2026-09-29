@@ -1,0 +1,108 @@
+{
+  "doctype": "DocType",
+  "name": "IL Payout Request",
+  "module": "Institute LMS",
+  "custom": 0,
+  "engine": "InnoDB",
+  "autoname": "hash",
+  "field_order": [
+    "wallet",
+    "method",
+    "request_key",
+    "amount_minor",
+    "currency",
+    "region",
+    "status",
+    "transaction_reference",
+    "receipt",
+    "reason",
+    "processed_by",
+    "completed_at",
+    "settlement_key"
+  ],
+  "fields": [
+    {
+      "fieldname": "wallet",
+      "label": "Wallet",
+      "fieldtype": "Link",
+      "reqd": 1,
+      "options": "IL Wallet"
+    },
+    {
+      "fieldname": "method",
+      "label": "Method",
+      "fieldtype": "Link",
+      "reqd": 1,
+      "options": "IL Payout Method"
+    },
+    {
+      "fieldname": "request_key",
+      "label": "Request Key",
+      "fieldtype": "Data",
+      "unique": 1,
+      "reqd": 1
+    },
+    {
+      "fieldname": "amount_minor",
+      "label": "Amount Minor",
+      "fieldtype": "Int",
+      "reqd": 1
+    },
+    {
+      "fieldname": "currency",
+      "label": "Currency",
+      "fieldtype": "Select",
+      "reqd": 1,
+      "options": "LKR\nUSD"
+    },
+    {
+      "fieldname": "region",
+      "label": "Region",
+      "fieldtype": "Select",
+      "reqd": 1,
+      "options": "Local\nInternational"
+    },
+    {
+      "fieldname": "status",
+      "label": "Status",
+      "fieldtype": "Select",
+      "default": "Pending",
+      "options": "Pending\nProcessing\nCompleted\nRejected"
+    },
+    {
+      "fieldname": "transaction_reference",
+      "label": "Transaction Reference",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "receipt",
+      "label": "Receipt",
+      "fieldtype": "Link",
+      "options": "File"
+    },
+    {
+      "fieldname": "reason",
+      "label": "Reason",
+      "fieldtype": "Small Text"
+    },
+    {
+      "fieldname": "processed_by",
+      "label": "Processed By",
+      "fieldtype": "Link",
+      "options": "User"
+    },
+    {
+      "fieldname": "completed_at",
+      "label": "Completed At",
+      "fieldtype": "Datetime"
+    },
+    {
+      "fieldname": "settlement_key",
+      "fieldtype": "Data",
+      "label": "Settlement Key",
+      "unique": 1
+    }
+  ],
+  "permissions": [],
+  "track_changes": 0
+}

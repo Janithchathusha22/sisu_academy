@@ -1,0 +1,31 @@
+{
+  "doctype": "DocType",
+  "name": "IL News Image",
+  "module": "Institute LMS",
+  "custom": 0,
+  "engine": "InnoDB",
+  "autoname": "hash",
+  "field_order": [
+    "image",
+    "alt"
+  ],
+  "fields": [
+    {
+      "fieldname": "image",
+      "label": "Image",
+      "fieldtype": "Attach Image",
+      "reqd": 1
+    },
+    {
+      "fieldname": "alt",
+      "label": "Alt",
+      "fieldtype": "Small Text",
+      "reqd": 1
+    }
+  ],
+  "permissions": [],
+  "istable": 1,
+  "track_changes": false,
+  "sort_field": "creation",
+  "sort_order": "DESC"
+}

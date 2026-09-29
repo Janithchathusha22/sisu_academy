@@ -1,0 +1,109 @@
+{
+  "doctype": "DocType",
+  "name": "IL Paper",
+  "module": "Institute LMS",
+  "custom": 0,
+  "engine": "InnoDB",
+  "autoname": "hash",
+  "field_order": [
+    "institute",
+    "classroom",
+    "title",
+    "description",
+    "source",
+    "status",
+    "questions",
+    "duration_minutes",
+    "opens_at",
+    "closes_at",
+    "max_marks",
+    "material",
+    "allow_upload",
+    "published_by",
+    "published_at"
+  ],
+  "fields": [
+    {
+      "fieldname": "institute",
+      "label": "Institute",
+      "fieldtype": "Link",
+      "options": "IL Institute"
+    },
+    {
+      "fieldname": "classroom",
+      "label": "Classroom",
+      "fieldtype": "Link",
+      "options": "IL Classroom"
+    },
+    {
+      "fieldname": "title",
+      "label": "Title",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "description",
+      "label": "Description",
+      "fieldtype": "Small Text"
+    },
+    {
+      "fieldname": "source",
+      "label": "Source",
+      "fieldtype": "Select",
+      "options": "Manual\nAI"
+    },
+    {
+      "fieldname": "status",
+      "label": "Status",
+      "fieldtype": "Select",
+      "options": "Draft\nPublished\nArchived"
+    },
+    {
+      "fieldname": "questions",
+      "label": "Questions",
+      "fieldtype": "Long Text"
+    },
+    {
+      "fieldname": "duration_minutes",
+      "label": "Duration Minutes",
+      "fieldtype": "Int"
+    },
+    {
+      "fieldname": "opens_at",
+      "label": "Opens At",
+      "fieldtype": "Datetime"
+    },
+    {
+      "fieldname": "closes_at",
+      "label": "Closes At",
+      "fieldtype": "Datetime"
+    },
+    {
+      "fieldname": "max_marks",
+      "label": "Max Marks",
+      "fieldtype": "Int"
+    },
+    {
+      "fieldname": "material",
+      "label": "Material",
+      "fieldtype": "Link",
+      "options": "IL Material"
+    },
+    {
+      "fieldname": "allow_upload",
+      "label": "Allow Upload",
+      "fieldtype": "Check"
+    },
+    {
+      "fieldname": "published_by",
+      "label": "Published By",
+      "fieldtype": "Link",
+      "options": "User"
+    },
+    {
+      "fieldname": "published_at",
+      "label": "Published At",
+      "fieldtype": "Datetime"
+    }
+  ],
+  "permissions": []
+}

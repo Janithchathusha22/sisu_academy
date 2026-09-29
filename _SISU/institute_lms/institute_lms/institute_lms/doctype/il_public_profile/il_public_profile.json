@@ -1,0 +1,149 @@
+{
+  "doctype": "DocType",
+  "name": "IL Public Profile",
+  "module": "Institute LMS",
+  "custom": 0,
+  "engine": "InnoDB",
+  "autoname": "hash",
+  "field_order": [
+    "user",
+    "username",
+    "display_name",
+    "kind",
+    "country",
+    "status",
+    "code",
+    "bio",
+    "socials",
+    "curriculum",
+    "languages",
+    "grades",
+    "is_school",
+    "review_reason",
+    "reviewed_by",
+    "profile_image",
+    "cover_image",
+    "tagline",
+    "qualifications",
+    "workspace"
+  ],
+  "fields": [
+    {
+      "fieldname": "user",
+      "label": "User",
+      "fieldtype": "Link",
+      "unique": 1,
+      "reqd": 1,
+      "options": "User"
+    },
+    {
+      "fieldname": "username",
+      "label": "Username",
+      "fieldtype": "Data",
+      "unique": 1,
+      "reqd": 1
+    },
+    {
+      "fieldname": "display_name",
+      "label": "Display Name",
+      "fieldtype": "Data",
+      "reqd": 1
+    },
+    {
+      "fieldname": "kind",
+      "label": "Kind",
+      "fieldtype": "Select",
+      "reqd": 1,
+      "options": "Student\nTeacher\nInstitute"
+    },
+    {
+      "fieldname": "country",
+      "label": "Country",
+      "fieldtype": "Data",
+      "reqd": 1
+    },
+    {
+      "fieldname": "status",
+      "label": "Status",
+      "fieldtype": "Select",
+      "default": "Pending",
+      "options": "Pending\nVerified\nRejected"
+    },
+    {
+      "fieldname": "code",
+      "label": "Code",
+      "fieldtype": "Data",
+      "unique": 1
+    },
+    {
+      "fieldname": "bio",
+      "label": "Bio",
+      "fieldtype": "Small Text"
+    },
+    {
+      "fieldname": "socials",
+      "label": "Socials",
+      "fieldtype": "Long Text"
+    },
+    {
+      "fieldname": "curriculum",
+      "label": "Curriculum",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "languages",
+      "label": "Languages",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "grades",
+      "label": "Grades",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "is_school",
+      "label": "Is School",
+      "fieldtype": "Check"
+    },
+    {
+      "fieldname": "review_reason",
+      "label": "Review Reason",
+      "fieldtype": "Small Text"
+    },
+    {
+      "fieldname": "reviewed_by",
+      "label": "Reviewed By",
+      "fieldtype": "Link",
+      "options": "User"
+    },
+    {
+      "fieldname": "profile_image",
+      "label": "Profile Image",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "cover_image",
+      "label": "Cover Image",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "tagline",
+      "label": "Tagline",
+      "fieldtype": "Data",
+      "length": 120
+    },
+    {
+      "fieldname": "qualifications",
+      "label": "Qualifications",
+      "fieldtype": "Data",
+      "length": 240
+    },
+    {
+      "fieldname": "workspace",
+      "label": "Workspace",
+      "fieldtype": "Link",
+      "options": "IL Institute"
+    }
+  ],
+  "permissions": []
+}

@@ -1,0 +1,227 @@
+{
+  "doctype": "DocType",
+  "name": "IL Classroom",
+  "module": "Institute LMS",
+  "custom": 0,
+  "engine": "InnoDB",
+  "autoname": "hash",
+  "field_order": [
+    "institute",
+    "title",
+    "teacher",
+    "subject",
+    "description",
+    "profile_image",
+    "cover_image",
+    "font",
+    "fee",
+    "exam_date",
+    "motivation",
+    "comments_enabled",
+    "allow_teacher_access_override",
+    "active",
+    "lms_course",
+    "exam_type",
+    "curriculum",
+    "grade",
+    "teaching_medium",
+    "public_provider",
+    "published",
+    "fee_mode",
+    "schedule_label",
+    "owner_type",
+    "owner_user",
+    "teacher_access",
+    "teacher_assignment_active",
+    "billing_type",
+    "programme"
+  ],
+  "fields": [
+    {
+      "fieldname": "institute",
+      "label": "Institute",
+      "fieldtype": "Link",
+      "options": "IL Institute",
+      "reqd": 1
+    },
+    {
+      "fieldname": "title",
+      "label": "Title",
+      "fieldtype": "Small Text",
+      "reqd": 1
+    },
+    {
+      "fieldname": "teacher",
+      "label": "Teacher",
+      "fieldtype": "Link",
+      "options": "IL Member",
+      "reqd": 1
+    },
+    {
+      "fieldname": "subject",
+      "label": "Subject",
+      "fieldtype": "Small Text",
+      "reqd": 1
+    },
+    {
+      "fieldname": "description",
+      "label": "Description",
+      "fieldtype": "Small Text"
+    },
+    {
+      "fieldname": "profile_image",
+      "label": "Profile Image",
+      "fieldtype": "Attach Image"
+    },
+    {
+      "fieldname": "cover_image",
+      "label": "Cover Image",
+      "fieldtype": "Attach Image"
+    },
+    {
+      "fieldname": "font",
+      "label": "Font",
+      "fieldtype": "Select",
+      "options": "sans\nserif\nhandwritten",
+      "reqd": 1,
+      "default": "sans"
+    },
+    {
+      "fieldname": "fee",
+      "label": "Fee",
+      "fieldtype": "Currency"
+    },
+    {
+      "fieldname": "exam_date",
+      "label": "Exam Date",
+      "fieldtype": "Date"
+    },
+    {
+      "fieldname": "motivation",
+      "label": "Motivation",
+      "fieldtype": "Small Text"
+    },
+    {
+      "fieldname": "comments_enabled",
+      "label": "Comments Enabled",
+      "fieldtype": "Check",
+      "default": 1
+    },
+    {
+      "fieldname": "allow_teacher_access_override",
+      "label": "Allow Teacher Access Override",
+      "fieldtype": "Check"
+    },
+    {
+      "fieldname": "active",
+      "label": "Active",
+      "fieldtype": "Check",
+      "default": 1
+    },
+    {
+      "fieldname": "lms_course",
+      "label": "Lms Course",
+      "fieldtype": "Link",
+      "options": "LMS Course"
+    },
+    {
+      "fieldname": "exam_type",
+      "fieldtype": "Data",
+      "label": "Exam Type"
+    },
+    {
+      "fieldname": "curriculum",
+      "fieldtype": "Data",
+      "label": "Curriculum"
+    },
+    {
+      "fieldname": "grade",
+      "fieldtype": "Data",
+      "label": "Grade"
+    },
+    {
+      "fieldname": "teaching_medium",
+      "fieldtype": "Data",
+      "label": "Teaching Medium"
+    },
+    {
+      "fieldname": "public_provider",
+      "label": "Published under",
+      "fieldtype": "Link",
+      "options": "IL Public Profile"
+    },
+    {
+      "fieldname": "published",
+      "label": "Show in provider directory",
+      "fieldtype": "Check",
+      "default": "0"
+    },
+    {
+      "fieldname": "fee_mode",
+      "label": "Class fee type",
+      "fieldtype": "Select",
+      "options": "Paid\nFree",
+      "default": "Paid"
+    },
+    {
+      "fieldname": "schedule_label",
+      "label": "Public timetable",
+      "fieldtype": "Data",
+      "length": 140
+    },
+    {
+      "fieldname": "owner_type",
+      "label": "Owner Type",
+      "fieldtype": "Select",
+      "options": "Institute\nTeacher",
+      "default": "Institute"
+    },
+    {
+      "fieldname": "owner_user",
+      "label": "Owner User",
+      "fieldtype": "Link",
+      "options": "User"
+    },
+    {
+      "fieldname": "teacher_access",
+      "label": "Teacher Access",
+      "fieldtype": "Select",
+      "options": "Teaching only\nFull control",
+      "default": "Teaching only"
+    },
+    {
+      "fieldname": "teacher_assignment_active",
+      "label": "Teacher Assignment Active",
+      "fieldtype": "Check",
+      "default": "1"
+    },
+    {
+      "fieldname": "billing_type",
+      "label": "Billing Type",
+      "fieldtype": "Select",
+      "options": "One-time\nMonthly\nProgramme module",
+      "default": "One-time"
+    },
+    {
+      "fieldname": "programme",
+      "label": "Programme",
+      "fieldtype": "Link",
+      "options": "IL Programme"
+    }
+  ],
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 0,
+      "report": 1,
+      "export": 1
+    }
+  ],
+  "istable": 0,
+  "track_changes": true,
+  "sort_field": "creation",
+  "sort_order": "DESC"
+}

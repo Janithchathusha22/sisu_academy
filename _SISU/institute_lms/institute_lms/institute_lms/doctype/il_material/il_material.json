@@ -1,0 +1,124 @@
+{
+  "doctype": "DocType",
+  "name": "IL Material",
+  "module": "Institute LMS",
+  "custom": 0,
+  "engine": "InnoDB",
+  "autoname": "hash",
+  "field_order": [
+    "institute",
+    "classroom",
+    "session",
+    "title",
+    "kind",
+    "url",
+    "youtube_id",
+    "description",
+    "file_id",
+    "preview_file_id",
+    "filename",
+    "file_type",
+    "file_size",
+    "download_policy"
+  ],
+  "fields": [
+    {
+      "fieldname": "institute",
+      "label": "Institute",
+      "fieldtype": "Link",
+      "options": "IL Institute",
+      "reqd": 1
+    },
+    {
+      "fieldname": "classroom",
+      "label": "Classroom",
+      "fieldtype": "Link",
+      "options": "IL Classroom",
+      "reqd": 1
+    },
+    {
+      "fieldname": "session",
+      "label": "Session",
+      "fieldtype": "Link",
+      "options": "IL Session"
+    },
+    {
+      "fieldname": "title",
+      "label": "Title",
+      "fieldtype": "Small Text",
+      "reqd": 1
+    },
+    {
+      "fieldname": "kind",
+      "label": "Kind",
+      "fieldtype": "Select",
+      "options": "Document\nRecording\nLink",
+      "reqd": 1,
+      "default": "Document"
+    },
+    {
+      "fieldname": "url",
+      "label": "Url",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "youtube_id",
+      "label": "Youtube Id",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "description",
+      "label": "Description",
+      "fieldtype": "Small Text"
+    },
+    {
+      "fieldname": "file_id",
+      "label": "Private original file",
+      "fieldtype": "Link",
+      "options": "File"
+    },
+    {
+      "fieldname": "preview_file_id",
+      "label": "Private PDF preview",
+      "fieldtype": "Link",
+      "options": "File"
+    },
+    {
+      "fieldname": "filename",
+      "label": "Original filename",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "file_type",
+      "label": "File type",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "file_size",
+      "label": "File size",
+      "fieldtype": "Int"
+    },
+    {
+      "fieldname": "download_policy",
+      "label": "Student access",
+      "fieldtype": "Select",
+      "options": "View only\nDownloadable",
+      "default": "View only"
+    }
+  ],
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 0,
+      "report": 1,
+      "export": 1
+    }
+  ],
+  "istable": 0,
+  "track_changes": true,
+  "sort_field": "creation",
+  "sort_order": "DESC"
+}

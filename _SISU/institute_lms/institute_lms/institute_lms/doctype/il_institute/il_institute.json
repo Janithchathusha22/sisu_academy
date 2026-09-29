@@ -1,0 +1,107 @@
+{
+  "doctype": "DocType",
+  "name": "IL Institute",
+  "module": "Institute LMS",
+  "custom": 0,
+  "engine": "InnoDB",
+  "autoname": "hash",
+  "field_order": [
+    "code",
+    "title",
+    "logo",
+    "accent",
+    "base_fee",
+    "billing_day",
+    "support_email",
+    "phone",
+    "address",
+    "city",
+    "language",
+    "school_mode"
+  ],
+  "fields": [
+    {
+      "fieldname": "code",
+      "label": "Code",
+      "fieldtype": "Data",
+      "reqd": 1,
+      "unique": 1
+    },
+    {
+      "fieldname": "title",
+      "label": "Title",
+      "fieldtype": "Small Text",
+      "reqd": 1
+    },
+    {
+      "fieldname": "logo",
+      "label": "Logo",
+      "fieldtype": "Attach Image"
+    },
+    {
+      "fieldname": "accent",
+      "label": "Accent",
+      "fieldtype": "Data",
+      "default": "#7563e6"
+    },
+    {
+      "fieldname": "base_fee",
+      "label": "Base Fee",
+      "fieldtype": "Currency"
+    },
+    {
+      "fieldname": "billing_day",
+      "label": "Billing Day",
+      "fieldtype": "Int",
+      "default": 1
+    },
+    {
+      "fieldname": "support_email",
+      "label": "Support Email",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "phone",
+      "label": "Phone",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "address",
+      "label": "Address",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "city",
+      "label": "City",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "language",
+      "label": "Language",
+      "fieldtype": "Select",
+      "options": "en\nsi\nta",
+      "reqd": 1,
+      "default": "en"
+    },
+    {
+      "fieldname": "school_mode",
+      "fieldtype": "Check",
+      "label": "School Mode"
+    }
+  ],
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 0,
+      "report": 1,
+      "export": 1
+    }
+  ],
+  "istable": 0,
+  "track_changes": true,
+  "sort_field": "creation",
+  "sort_order": "DESC"
+}

@@ -1,0 +1,105 @@
+{
+  "doctype": "DocType",
+  "name": "IL Programme",
+  "module": "Institute LMS",
+  "custom": 0,
+  "engine": "InnoDB",
+  "autoname": "hash",
+  "track_changes": 1,
+  "istable": 0,
+  "fields": [
+    {
+      "fieldname": "institute",
+      "label": "Institute",
+      "fieldtype": "Link",
+      "options": "IL Institute",
+      "reqd": 1
+    },
+    {
+      "fieldname": "provider",
+      "label": "Provider",
+      "fieldtype": "Link",
+      "options": "IL Public Profile",
+      "reqd": 1
+    },
+    {
+      "fieldname": "title",
+      "label": "Title",
+      "fieldtype": "Data",
+      "reqd": 1
+    },
+    {
+      "fieldname": "description",
+      "label": "Description",
+      "fieldtype": "Small Text"
+    },
+    {
+      "fieldname": "cover_image",
+      "label": "Cover Image",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "duration_months",
+      "label": "Duration Months",
+      "fieldtype": "Int",
+      "default": 6
+    },
+    {
+      "fieldname": "fee",
+      "label": "Fee",
+      "fieldtype": "Currency",
+      "reqd": 1
+    },
+    {
+      "fieldname": "currency",
+      "label": "Currency",
+      "fieldtype": "Data",
+      "default": "LKR"
+    },
+    {
+      "fieldname": "starts_on",
+      "label": "Starts On",
+      "fieldtype": "Date"
+    },
+    {
+      "fieldname": "ends_on",
+      "label": "Ends On",
+      "fieldtype": "Date"
+    },
+    {
+      "fieldname": "active",
+      "label": "Active",
+      "fieldtype": "Check",
+      "default": 1
+    },
+    {
+      "fieldname": "modules",
+      "label": "Modules",
+      "fieldtype": "Table",
+      "options": "IL Programme Module"
+    }
+  ],
+  "field_order": [
+    "institute",
+    "provider",
+    "title",
+    "description",
+    "cover_image",
+    "duration_months",
+    "fee",
+    "currency",
+    "starts_on",
+    "ends_on",
+    "active",
+    "modules"
+  ],
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 0
+    }
+  ]
+}

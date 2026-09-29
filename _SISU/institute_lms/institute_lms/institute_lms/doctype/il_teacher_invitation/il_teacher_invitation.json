@@ -1,0 +1,65 @@
+{
+  "doctype": "DocType",
+  "name": "IL Teacher Invitation",
+  "module": "Institute LMS",
+  "custom": 0,
+  "engine": "InnoDB",
+  "autoname": "hash",
+  "field_order": [
+    "institute",
+    "profile",
+    "invite_email",
+    "invited_by",
+    "expires_at",
+    "status",
+    "responded_at"
+  ],
+  "fields": [
+    {
+      "fieldname": "institute",
+      "label": "Institute",
+      "fieldtype": "Link",
+      "options": "IL Institute",
+      "reqd": 1
+    },
+    {
+      "fieldname": "profile",
+      "label": "Profile",
+      "fieldtype": "Link",
+      "options": "IL Public Profile",
+      "reqd": 1
+    },
+    {
+      "fieldname": "invite_email",
+      "label": "Invite Email",
+      "fieldtype": "Data",
+      "reqd": 1
+    },
+    {
+      "fieldname": "invited_by",
+      "label": "Invited By",
+      "fieldtype": "Link",
+      "options": "User",
+      "reqd": 1
+    },
+    {
+      "fieldname": "expires_at",
+      "label": "Expires At",
+      "fieldtype": "Datetime",
+      "reqd": 1
+    },
+    {
+      "fieldname": "status",
+      "label": "Status",
+      "fieldtype": "Select",
+      "options": "Pending\nAccepted\nDeclined\nCancelled",
+      "default": "Pending"
+    },
+    {
+      "fieldname": "responded_at",
+      "label": "Responded At",
+      "fieldtype": "Datetime"
+    }
+  ],
+  "permissions": []
+}
