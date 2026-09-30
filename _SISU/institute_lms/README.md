@@ -1,3 +1,5 @@
+> **Migration in progress:** A new FastAPI/Supabase foundation exists, but the Vue workspace still calls the old Frappe API. It is not yet a working FastAPI/Supabase replacement. See [migration status and Windows commands](docs/FASTAPI_SUPABASE_MIGRATION.md) and the [legacy dependency inventory](docs/LEGACY_DEPENDENCY_INVENTORY.md). The browser-only Netlify preview is separate.
+
 > **27 September revision:** Normal startup now requires a real Frappe session; fictional accounts and public plan prices are retired. See [current implementation and limits](docs/OWNER_PRICING_AND_PAPERS.md) and [reference feature coverage](docs/REFERENCE_FEATURE_MAP.md). Historical preview/pricing sections below are superseded. This build is not yet production-accepted.
 
 # Sisu · Institute and independent-teacher portal for Frappe LMS
