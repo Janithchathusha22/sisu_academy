@@ -1,4 +1,7 @@
-# SISU Academy — Supabase Reporting Connection
+# SISU Academy â€” Supabase Reporting Connection
+
+> **Legacy reference only.** Supabase is now the primary application database;
+> do not configure this retired one-way reporting job.
 
 This integration keeps Frappe/MariaDB as the authoritative application database and sends a small, one-way reporting snapshot to Supabase every five minutes.
 

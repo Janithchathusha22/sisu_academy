@@ -1,0 +1,26 @@
+# Historical package metadata retained for the read-only Frappe migration source.
+# It is not part of the active FastAPI runtime.
+
+[project]
+name = "institute_lms"
+version = "0.1.0"
+description = "Sri Lankan institute operations for Frappe LMS"
+authors = [{name = "Institute LMS contributors"}]
+requires-python = ">=3.11"
+dependencies = ["regex>=2024.11.6", "requests>=2.32.3", "Pillow>=11.1.0"]
+
+[build-system]
+requires = ["flit_core>=3.4,<4"]
+build-backend = "flit_core.buildapi"
+
+[tool.flit.module]
+name = "institute_lms"
+
+[tool.bench.frappe-dependencies]
+frappe = ">=17.0.0-dev,<18.0.0"
+lms = ">=2.0.0-dev"
+
+[tool.bench.assets]
+build_dir = "./frontend"
+out_dir = "../institute_lms/public/portal"
+index_html_path = "../institute_lms/www/campus.html"

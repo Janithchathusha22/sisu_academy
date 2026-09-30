@@ -1,92 +1,62 @@
-from fastapi import Depends, FastAPI, HTTPException
+"""Sisu Academy FastAPI application."""
+
+import os
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
-from .config import get_settings
-from .database import user_client
-from .dependencies import Principal, current_user, require_roles
+from fastapi.responses import JSONResponse
 
-settings = get_settings()
-app = FastAPI(title="Sisu Academy API")
-origins = ["http://127.0.0.1:5178", "http://localhost:5178", settings.frontend_url]
-app.add_middleware(CORSMiddleware, allow_origins=list(set(origins)), allow_credentials=True,
-                   allow_methods=["GET", "POST", "PUT", "DELETE"], allow_headers=["Authorization", "Content-Type"])
+from .api import academics, commerce, content, health, identity, institutions, learning
+from .config import Settings, get_settings
 
 
-class CourseInput(BaseModel):
-    title: str = Field(min_length=1, max_length=120)
-    description: str = Field(default="", max_length=2000)
-    institution_id: str
+def create_app(settings: Settings | None = None) -> FastAPI:
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        runtime = settings or get_settings()
+        runtime.validate_runtime()
+        app.state.settings = runtime
+        yield
+
+    app = FastAPI(
+        title="Sisu Academy API",
+        version="1.0.0",
+        description="FastAPI service backed by Supabase Auth and PostgreSQL",
+        lifespan=lifespan,
+    )
+
+    if settings:
+        origins = settings.allowed_origins
+    else:
+        configured = os.getenv("FRONTEND_URL", "http://127.0.0.1:5178")
+        extras = os.getenv("CORS_ORIGINS", "http://127.0.0.1:5178,http://localhost:5178")
+        origins = sorted({configured.rstrip("/"), *(item.strip().rstrip("/") for item in extras.split(",") if item.strip())})
+
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=origins,
+        allow_credentials=True,
+        allow_methods=["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
+        allow_headers=["Authorization", "Content-Type"],
+    )
+
+    for router in (
+        health.router,
+        identity.router,
+        institutions.router,
+        learning.router,
+        academics.router,
+        commerce.router,
+        content.router,
+    ):
+        app.include_router(router, prefix="/api")
+
+    @app.exception_handler(RuntimeError)
+    async def persistence_error(_: Request, __: RuntimeError) -> JSONResponse:
+        return JSONResponse(status_code=502, content={"detail": "The application database request failed"})
+
+    return app
 
 
-class AttendanceInput(BaseModel):
-    class_id: str
-    student_id: str
-    occurred_at: str
-    status: str = Field(pattern="^(Present|Absent|Late|Excused)$")
-
-
-@app.get("/api/health")
-def health():
-    return {"status": "healthy", "backend": "FastAPI", "database": "Supabase PostgreSQL"}
-
-
-@app.get("/api/me")
-def me(user: Principal = Depends(current_user)):
-    rows = user_client(user.token).table("profiles").select("*").eq("id", user.id).limit(1).execute().data
-    return rows[0]
-
-
-@app.get("/api/courses")
-def courses(user: Principal = Depends(current_user)):
-    return user_client(user.token).table("courses").select("*").order("created_at", desc=True).execute().data
-
-
-@app.get("/api/courses/{course_id}")
-def course(course_id: str, user: Principal = Depends(current_user)):
-    rows = user_client(user.token).table("courses").select("*").eq("id", course_id).limit(1).execute().data
-    if not rows:
-        raise HTTPException(404, "Course not found")
-    return rows[0]
-
-
-@app.post("/api/courses", status_code=201)
-def create_course(data: CourseInput, user: Principal = Depends(require_roles("teacher", "institute_admin", "super_admin"))):
-    if user.role != "super_admin" and user.institution_id != data.institution_id:
-        raise HTTPException(403, "Wrong institution")
-    return user_client(user.token).table("courses").insert({**data.model_dump(), "created_by": user.id}).execute().data[0]
-
-
-@app.get("/api/classes")
-def classes(user: Principal = Depends(current_user)):
-    return user_client(user.token).table("classes").select("*").order("created_at", desc=True).execute().data
-
-
-@app.get("/api/students")
-def students(user: Principal = Depends(require_roles("teacher", "institute_admin", "super_admin"))):
-    return user_client(user.token).table("students").select("*").execute().data
-
-
-@app.get("/api/teachers")
-def teachers(user: Principal = Depends(current_user)):
-    return user_client(user.token).table("teachers").select("*").execute().data
-
-
-@app.get("/api/attendance")
-def attendance(user: Principal = Depends(current_user)):
-    return user_client(user.token).table("attendance").select("*").order("occurred_at", desc=True).limit(200).execute().data
-
-
-@app.post("/api/attendance", status_code=201)
-def record_attendance(data: AttendanceInput, user: Principal = Depends(require_roles("teacher", "institute_admin", "super_admin"))):
-    row = {**data.model_dump(), "recorded_by": user.id}
-    return user_client(user.token).table("attendance").insert(row).execute().data[0]
-
-
-@app.get("/api/assignments")
-def assignments(user: Principal = Depends(current_user)):
-    return user_client(user.token).table("assignments").select("*").limit(200).execute().data
-
-
-@app.get("/api/exams")
-def exams(user: Principal = Depends(current_user)):
-    return user_client(user.token).table("exams").select("id,class_id,title,opens_at,closes_at").limit(200).execute().data
+app = create_app()

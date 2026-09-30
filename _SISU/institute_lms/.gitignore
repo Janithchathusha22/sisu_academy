@@ -5,5 +5,13 @@ __pycache__/
 .env
 .env.supabase.local
 .env.*.local
+!.env.example
+!**/.env.example
 .pytest_cache/
 .venv/
+backend/.venv/
+.coverage
+htmlcov/
+migration-data/
+exports/
+scripts/auth-map.json
