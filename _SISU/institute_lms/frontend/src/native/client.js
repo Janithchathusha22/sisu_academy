@@ -1,6 +1,6 @@
 import {previewMode} from '../preview/mode'
 export async function request(module, method, args = {}, verb = 'POST') {
-  if (import.meta.env.DEV && previewMode) {
+  if (previewMode) {
     const {previewRequest}=await import('../preview/adapter')
     return structuredClone(await previewRequest(module,method,args))
   }

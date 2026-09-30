@@ -3,7 +3,7 @@ import {ref,defineAsyncComponent,onMounted} from 'vue'
 import Icon from '../Icon.vue'
 import MobileVerification from './MobileVerification.vue'
 import {previewMode} from '../preview/mode'
-const Preview=import.meta.env.DEV?defineAsyncComponent(()=>import('../preview/PreviewShell.vue')):null
+const Preview=previewMode?defineAsyncComponent(()=>import('../preview/PreviewShell.vue')):null
 import {request} from './client'
 const Campus=defineAsyncComponent(()=>import('../App.vue'))
 const Owner=defineAsyncComponent(()=>import('./SuperAdmin.vue'))
