@@ -1,0 +1,7 @@
+[build]
+  base = "_SISU/institute_lms/frontend"
+  command = "npm run build:netlify"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "20"
