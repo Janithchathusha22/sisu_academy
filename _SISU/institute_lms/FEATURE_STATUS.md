@@ -1,4 +1,4 @@
-> **27 September revision:** Normal startup now requires a real Frappe session; fictional accounts and public plan prices are retired. See [current implementation and limits](docs/OWNER_PRICING_AND_PAPERS.md) and [reference feature coverage](docs/REFERENCE_FEATURE_MAP.md). Historical preview/pricing sections below are superseded. This build is not yet production-accepted.
+> **1 October migration update:** The active portal entry uses Supabase Auth and a FastAPI cookie session for the new core courses/attendance workspace. The detailed feature table below describes the retained preview/Frappe implementation; those remaining modules are not yet Supabase-native. This build is not production-accepted until live database and RLS verification passes.
 
 # Feature status · 25 September 2026
 

@@ -3,7 +3,14 @@ frontend/dist/
 __pycache__/
 *.pyc
 .env
+.env.local
 .env.supabase.local
 .env.*.local
+backend/.env*
+!backend/.env.example
+frontend/.env*
+!frontend/.env.example
 .pytest_cache/
 .venv/
+.qa-build/
+.qa-browser/

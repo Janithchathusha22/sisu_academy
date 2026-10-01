@@ -50,15 +50,19 @@ access rules, and amounts before changing DNS.
 
 ## Current implementation boundary
 
-The FastAPI service has health, current user, courses, classes, students,
-teachers, attendance, assignments, and exam listing endpoints with token
-validation and RLS-backed Supabase reads. Teachers can record attendance for
-their assigned classes. The
-Vue Supabase Auth/API clients are available but the existing Vue pages still
-use Frappe method contracts. Attendance, assignments, exams, invoices,
-payments, storage, and onboarding are not yet fully migrated. Do not use
-this milestone as a production replacement. The browser-only preview remains
-available via `npm run build:netlify` and does not require a backend.
+The active portal entry uses Supabase email/password or Google authentication,
+then exchanges that session once for a FastAPI-managed HttpOnly cookie. The
+core Supabase workspace supports profile/session lookup, courses, classes,
+students/teachers, and attendance. Access tokens are not attached by Vue to
+normal API requests; FastAPI retains encrypted session material so its
+PostgREST calls continue to execute with the user's RLS identity.
+
+The remaining feature modules still have Frappe method contracts and are kept
+for staged migration. Assignments, exams, invoices, payments, storage,
+provider review operations, and external integrations are not yet fully
+migrated. Do not use this milestone as a production replacement until the
+database verification and live end-to-end matrix pass. See
+`SUPABASE_AUTH_SETUP.md`.
 
 ## Windows PowerShell
 
