@@ -38,9 +38,3 @@ def service_client() -> Client:
     settings = get_settings()
     settings.require_auth()
     return admin_client(settings)
-
-
-def service_client() -> Client:
-    settings = get_settings()
-    settings.require_auth()
-    return admin_client(settings)
