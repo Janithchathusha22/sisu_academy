@@ -1,5 +1,9 @@
 # SISU Academy — Supabase Migration Assessment
 
+> **Historical assessment (pre-refactor).** Its no-cutover decision described
+> the former Frappe runtime. The approved replacement is documented in
+> `docs/FRAPPE_TO_SUPABASE_MIGRATION.md`; Supabase is now the primary target.
+
 **Assessment date:** 29 September 2026  
 **Audience:** Project Manager, Product Owner and Technical Lead  
 **Decision:** Do not perform a production database cutover yet

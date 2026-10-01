@@ -1,3 +1,4 @@
+-- LEGACY ONLY: retired one-way reporting schema; never apply to a new SISU project.
 -- SISU Academy: private, server-written Supabase reporting schema.
 -- Run with a trusted database administrator connection. Do not expose this
 -- schema through the Supabase Data API.
