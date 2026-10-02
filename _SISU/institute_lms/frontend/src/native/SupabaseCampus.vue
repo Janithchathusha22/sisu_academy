@@ -4,12 +4,13 @@ import Icon from '../Icon.vue'
 import Art from '../Art.vue'
 import {api,currentSession,logoutSession} from '../lib/api'
 import {applicationRole,applicationRoleLabel,canOpenWorkspacePage,workspaceKind} from '../lib/workspace'
-import {loadSections} from '../lib/section-loading'
+import {loadSections,mergeSectionResults} from '../lib/section-loading'
 
 const props=defineProps({session:{type:Object,required:true}})
 const emit=defineEmits(['logout','session'])
 const page=ref('dashboard'),mobile=ref(false),busy=ref(false),loaded=ref(false),error=ref(''),message=ref('')
 const loadErrors=ref({}),learningError=ref(''),learningBusy=ref(false)
+const assignmentBusy=ref({})
 const data=ref({}),profile=ref({...props.session.profile}),fullName=ref(profile.value.full_name)
 const role=computed(()=>applicationRole(profile.value))
 const manager=computed(()=>['teacher','institute_admin','super_admin'].includes(role.value))
@@ -54,6 +55,22 @@ function navigate(id){if(!canOpenWorkspacePage(profile.value,id))return;page.val
 function className(id){return data.value.classes?.find(c=>c.id===id)?.title||id}
 function studentName(id){return data.value.students?.find(s=>s.id===id)?.student_code||id}
 function date(value){return value?new Date(value).toLocaleString():'Not scheduled'}
+function selectedInstitutionExists(profileId){
+  const selected=selectedInstitutions.value[profileId]
+  return Boolean(selected&&data.value.institutions?.some(item=>item.id===selected))
+}
+async function refreshSections(paths){
+  const result=await loadSections(paths,path=>api('/api/'+path))
+  const merged=mergeSectionResults(data.value,loadErrors.value,paths,result)
+  data.value=merged.values
+  loadErrors.value=merged.errors
+  if(paths.includes('admin/overview')){
+    if(Object.hasOwn(result.values,'admin/overview'))adminOverview.value=result.values['admin/overview']
+    adminOverviewError.value=loadErrors.value['admin/overview']||''
+  }
+  loaded.value=true
+  if(result.authError)throw result.authError
+}
 async function load(){
   busy.value=true;error.value='';loaded.value=false
   try{
@@ -66,18 +83,14 @@ async function load(){
       : ['courses','classes','schedule','attendance','enrollments','assignments','materials','exams','results','payments','notifications']
     if(!owner.value&&manager.value)paths.push('students','teachers')
     if(!owner.value&&admin.value)paths.push('institutions')
-    const {values,errors,authError}=await loadSections(paths,path=>api('/api/'+path))
-    if(authError)throw authError
-    data.value=Object.fromEntries(paths.map(path=>[path,path in values?values[path]:[]]));loadErrors.value=errors;loaded.value=true
-    adminOverview.value=values['admin/overview']||null
-    adminOverviewError.value=errors['admin/overview']||''
+    await refreshSections(paths)
     if(owner.value){
-      selectedInstitutions.value={}
-      for(const row of data.value.applications||[])if(data.value.institutions?.length)selectedInstitutions.value[row.id]=data.value.institutions[0].id
-      for(const row of data.value['profiles/unassigned']||[])if(data.value.institutions?.length)selectedInstitutions.value[row.id]=data.value.institutions[0].id
+      for(const row of data.value.applications||[]){
+        if(!selectedInstitutions.value[row.id]&&data.value.institutions?.length)selectedInstitutions.value[row.id]=data.value.institutions[0].id
+      }
     }
     if(!selectedCourse.value&&data.value.courses?.length)selectedCourse.value=data.value.courses[0].id
-  }catch(e){data.value={};error.value=e.message}finally{busy.value=false}
+  }catch(e){error.value=e.message}finally{busy.value=false}
 }
 async function loadModules(){
   selectedModule.value='';modules.value=[];lessons.value=[];learningError.value=''
@@ -105,6 +118,20 @@ async function createClass(){if(await save('classes',{...classroom.value,institu
 async function record(){await save('attendance',register.value)}
 async function schedule(){await save('schedule',{...meeting.value,starts_at:new Date(meeting.value.starts_at).toISOString(),ends_at:new Date(meeting.value.ends_at).toISOString()})}
 async function review(row,decision){await save('applications/'+row.id+'/review',{decision,institution_id:selectedInstitutions.value[row.id]||null})}
+async function assignStudent(row){
+  if(assignmentBusy.value[row.id])return
+  const institutionId=selectedInstitutions.value[row.id]
+  if(!institutionId||!data.value.institutions?.some(item=>item.id===institutionId))return
+  assignmentBusy.value={...assignmentBusy.value,[row.id]:true}
+  error.value='';message.value=''
+  try{
+    await api('/api/profiles/'+row.id+'/institution',{method:'POST',body:{institution_id:institutionId}})
+    message.value='Student assigned successfully.'
+    await refreshSections(['profiles/unassigned','admin/overview'])
+  }catch(e){error.value=e.message}finally{
+    assignmentBusy.value={...assignmentBusy.value,[row.id]:false}
+  }
+}
 async function saveProfile(){if(await save('me',{full_name:fullName.value.trim()},'PUT'))fullName.value=profile.value.full_name}
 async function logout(){if(busy.value)return;busy.value=true;try{await logoutSession();emit('logout')}catch(e){error.value=e.message}finally{busy.value=false}}
 watch(()=>props.session.profile,value=>{profile.value={...value};fullName.value=profile.value.full_name})
@@ -182,11 +209,13 @@ onMounted(load)
             <section class="panel">
               <h2>Assign verified students</h2>
               <p>Assigning a student creates their institution membership; it does not grant platform administration.</p>
+              <p v-if="loadErrors.institutions" class="connection-error" role="alert">{{loadErrors.institutions}}</p>
               <p v-if="loadErrors['profiles/unassigned']" class="connection-error" role="alert">{{loadErrors['profiles/unassigned']}} If this is a profile visibility permission error, review the additive student-visibility migration before applying it.</p>
+              <p v-if="loaded&&!loadErrors.institutions&&!data.institutions?.length">No institutions available. Create an institution first. <button class="button subtle" @click="navigate('institutions')">Go to Institutions</button></p>
               <article v-for="row in data['profiles/unassigned']||[]" :key="row.id" class="data-row">
                 <h3>{{row.full_name||row.email}}</h3><p>{{row.email}}</p>
                 <label>Institution<select v-model="selectedInstitutions[row.id]" required><option value="" disabled>Select institution</option><option v-for="item in data.institutions||[]" :key="item.id" :value="item.id">{{item.title}}</option></select></label>
-                <button class="button primary" :disabled="busy||!selectedInstitutions[row.id]" @click="save('profiles/'+row.id+'/institution',{institution_id:selectedInstitutions[row.id]})">Assign student</button>
+                <button v-if="!loadErrors['profiles/unassigned']&&!loadErrors.institutions&&data.institutions?.length&&selectedInstitutionExists(row.id)" class="button primary" :disabled="assignmentBusy[row.id]" @click="assignStudent(row)">{{assignmentBusy[row.id]?'Assigning…':'Assign student'}}</button>
               </article>
               <p v-if="loaded&&!loadErrors['profiles/unassigned']&&!data['profiles/unassigned']?.length">No verified unassigned students.</p>
             </section>

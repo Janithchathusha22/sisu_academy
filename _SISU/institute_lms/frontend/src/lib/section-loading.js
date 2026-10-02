@@ -1,3 +1,5 @@
+import {safeApiErrorMessage} from './api-errors.js'
+
 export async function loadSections(paths, request) {
   const responses = await Promise.allSettled(paths.map(path=>Promise.resolve().then(()=>request(path))))
   const values = {}
@@ -11,15 +13,27 @@ export async function loadSections(paths, request) {
       return
     }
     const status = response.reason?.status
-    errors[path] = status === 403
-      ? 'Your account is not permitted to view this section.'
-      : status === 503
-        ? 'The server or Supabase is unavailable. Try again shortly.'
-        : status === 0
-          ? 'Cannot connect to the server. Check that the backend is running.'
-          : response.reason?.message || 'This section could not load.'
+    errors[path] = status
+      ? safeApiErrorMessage(status)
+      : 'This section could not load. Please try again.'
     if (response.reason?.status === 401) authError ||= response.reason
   })
 
   return {values, errors, authError}
+}
+
+export function mergeSectionResults(currentValues, currentErrors, paths, result) {
+  const values = {...currentValues}
+  const errors = {...currentErrors}
+
+  for (const path of paths) {
+    if (Object.hasOwn(result.values, path)) {
+      values[path] = result.values[path]
+      delete errors[path]
+    } else if (Object.hasOwn(result.errors, path)) {
+      errors[path] = result.errors[path]
+    }
+  }
+
+  return {values, errors}
 }

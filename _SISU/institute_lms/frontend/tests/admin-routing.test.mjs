@@ -51,6 +51,17 @@ test('real Supabase super admin has a dedicated connected workspace, not the pre
   assert.doesNotMatch(source,/PreviewShell|requestRoute|from '\.\/SuperAdmin\.vue'/)
 })
 
+test('student assignment requires a selected real institution and refreshes only affected sections',async()=>{
+  const source=await readFile(new URL('../src/native/SupabaseCampus.vue',import.meta.url),'utf8')
+  assert.match(source,/No institutions available\. Create an institution first\./)
+  assert.match(source,/Go to Institutions/)
+  assert.match(source,/selectedInstitutionExists\(row\.id\)/)
+  assert.match(source,/loadErrors\['profiles\/unassigned'\].*loadErrors\.institutions/)
+  assert.match(source,/refreshSections\(\['profiles\/unassigned','admin\/overview'\]\)/)
+  assert.match(source,/institution_id:institutionId/)
+  assert.doesNotMatch(source,/save\('profiles\/'\+row\.id\+'\/institution'/)
+})
+
 test('admin selection never supplies the application role',async()=>{
   const source=await readFile(new URL('../src/native/PortalRoot.vue',import.meta.url),'utf8')
   assert.match(source,/name:'Admin'/)

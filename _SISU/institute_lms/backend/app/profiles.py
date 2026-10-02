@@ -43,17 +43,44 @@ def review(application_id: UUID, data: Review, user: Principal=Depends(require_r
 
 @router.post('/profiles/{profile_id}/institution')
 def assign_student(profile_id: UUID, data: Assignment, user: Principal=Depends(require_roles('super_admin'))):
-    user_client(user.token).rpc('assign_student',{'student_profile':str(profile_id),'institution':str(data.institution_id)}).execute()
+    client = user_client(user.token)
+    student = (
+        client.table('profiles')
+        .select('id')
+        .eq('id', str(profile_id))
+        .eq('profile_kind', 'student')
+        .eq('status', 'verified')
+        .limit(1)
+        .execute()
+        .data
+    )
+    if not student:
+        raise HTTPException(422, 'A verified student is required.')
+    institution = (
+        client.table('institutions')
+        .select('id')
+        .eq('id', str(data.institution_id))
+        .limit(1)
+        .execute()
+        .data
+    )
+    if not institution:
+        raise HTTPException(422, 'The selected institution does not exist.')
+    client.rpc('assign_student', {
+        'student_profile': str(profile_id),
+        'institution': str(data.institution_id),
+    }).execute()
     return {'status':'assigned'}
 
 @router.get('/institutions')
 def institutions(user: Principal=Depends(require_roles('super_admin','institute_admin'))):
-    return user_client(user.token).table('institutions').select('id,title,code').execute().data
+    rows = user_client(user.token).table('institutions').select('id,title,code').execute().data
+    return rows if rows is not None else []
 
 @router.get('/profiles/unassigned')
 def unassigned(user: Principal=Depends(require_roles('super_admin'))):
     client = user_client(user.token)
     profiles = client.table('profiles').select('id,full_name,email').eq('profile_kind','student').eq('status','verified').limit(100).execute().data
-    assigned = client.table('institution_memberships').select('user_id').eq('role','student').in_('status',['pending','active']).execute().data
+    assigned = client.table('institution_memberships').select('user_id').in_('status',['pending','active']).execute().data
     assigned_ids = {row['user_id'] for row in assigned}
     return [profile for profile in profiles if profile['id'] not in assigned_ids]

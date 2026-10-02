@@ -1,4 +1,5 @@
 import {authClient, clearLocalSession} from './supabase'
+import {safeApiErrorMessage} from './api-errors.js'
 
 const base = (import.meta.env?.VITE_API_BASE_URL || '').replace(/\/$/, '')
 
@@ -11,7 +12,7 @@ export class ApiError extends Error {
 
 async function accessToken() {
   const {data, error} = await authClient().auth.getSession()
-  if (error) throw new ApiError(error.message, 401)
+  if (error) throw new ApiError(safeApiErrorMessage(401), 401)
   return data.session?.access_token || ''
 }
 
@@ -29,22 +30,21 @@ export async function api(path, {method = 'GET', body} = {}) {
       ...(body ? {body: JSON.stringify(body)} : {}),
     })
   } catch {
-    throw new ApiError('Cannot connect to the server. Please try again shortly.', 0)
+    throw new ApiError(safeApiErrorMessage(0), 0)
   }
   if (!response.ok) {
-    const detail = await response.json().catch(() => ({}))
     if (response.status === 401) {
-      await clearLocalSession().catch(() => {})
       window.dispatchEvent(new Event('sisu-session-expired'))
+      await clearLocalSession().catch(() => {})
     }
-    throw new ApiError(typeof detail.detail === 'string' ? detail.detail : `Request failed (${response.status})`, response.status)
+    throw new ApiError(safeApiErrorMessage(response.status), response.status)
   }
   return response.status === 204 ? null : response.json()
 }
 
 export async function currentSession() {
   const {data, error} = await authClient().auth.getSession()
-  if (error) throw new ApiError(error.message, 401)
+  if (error) throw new ApiError(safeApiErrorMessage(401), 401)
   if (!data.session) throw new ApiError('Authentication required', 401)
   const profile = await api('/api/me')
   return {user: data.session.user, profile, access_token: data.session.access_token}
