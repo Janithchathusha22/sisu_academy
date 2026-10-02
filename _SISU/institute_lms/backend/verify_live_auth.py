@@ -174,7 +174,7 @@ def run(env_file: Path) -> dict[str, str]:
                 for role, token in tokens.items():
                     response = api.get("/api/me", headers={"Authorization": f"Bearer {token}"})
                     body = response.json() if response.status_code == 200 else {}
-                    actual_role = body.get("profile_kind") or body.get("role")
+                    actual_role = body.get("application_role") or body.get("role")
                     expected_status = 200 if role == "student" else 403
                     role_matches = actual_role == role if role == "student" else True
                     report[f"{role}_api_token"] = (

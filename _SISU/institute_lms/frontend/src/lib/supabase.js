@@ -1,12 +1,27 @@
 import {createClient} from '@supabase/supabase-js'
 
+const EXPECTED_PROJECT_REF = 'yfdettlsvgsslzjjhoxo'
 const url = import.meta.env.VITE_SUPABASE_URL?.trim()
+const projectRef = import.meta.env.VITE_SUPABASE_PROJECT_REF?.trim()
 const publishableKey = (
   import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY
 )?.trim()
 
+function validProjectOrigin(value, expectedRef) {
+  if (!value || expectedRef !== EXPECTED_PROJECT_REF) return false
+  try {
+    const parsed = new URL(value)
+    const local = parsed.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(parsed.hostname)
+    return local || (parsed.protocol === 'https:' && parsed.hostname === `${expectedRef}.supabase.co`)
+  } catch {
+    return false
+  }
+}
+
+const configurationValid = validProjectOrigin(url, projectRef) && Boolean(publishableKey)
+
 // One browser client owns the persisted Supabase session and token refresh.
-export const supabase = url && publishableKey ? createClient(url, publishableKey, {
+export const supabase = configurationValid ? createClient(url, publishableKey, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
@@ -15,7 +30,7 @@ export const supabase = url && publishableKey ? createClient(url, publishableKey
 }) : null
 
 export function authClient() {
-  if (!supabase) throw new Error('Supabase authentication is not configured.')
+  if (!supabase) throw new Error('Supabase authentication project configuration is invalid.')
   return supabase
 }
 
@@ -65,5 +80,10 @@ export async function updatePassword(password) {
 
 export async function signOut() {
   const {error} = await authClient().auth.signOut()
+  if (error) throw error
+}
+
+export async function clearLocalSession() {
+  const {error} = await authClient().auth.signOut({scope: 'local'})
   if (error) throw error
 }

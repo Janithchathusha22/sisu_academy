@@ -1,20 +1,22 @@
 <script setup>
-import {computed,onMounted,ref} from 'vue'
+import {computed,onMounted,ref,watch} from 'vue'
 import Icon from '../Icon.vue'
 import Art from '../Art.vue'
 import {api,currentSession,logoutSession} from '../lib/api'
-import {canOpenWorkspacePage,workspaceKind} from '../lib/workspace'
+import {applicationRole,applicationRoleLabel,canOpenWorkspacePage,workspaceKind} from '../lib/workspace'
 
 const props=defineProps({session:{type:Object,required:true}})
 const emit=defineEmits(['logout','session'])
 const page=ref('dashboard'),mobile=ref(false),busy=ref(false),loaded=ref(false),error=ref(''),message=ref('')
 const data=ref({}),profile=ref({...props.session.profile}),fullName=ref(profile.value.full_name)
-const manager=computed(()=>['teacher','institute_admin','super_admin'].includes(profile.value.role))
-const admin=computed(()=>['institute_admin','super_admin'].includes(profile.value.role))
-const owner=computed(()=>profile.value.role==='super_admin')
+const role=computed(()=>applicationRole(profile.value))
+const manager=computed(()=>['teacher','institute_admin','super_admin'].includes(role.value))
+const admin=computed(()=>['institute_admin','super_admin'].includes(role.value))
+const owner=computed(()=>role.value==='super_admin')
 const workspace=computed(()=>workspaceKind(profile.value))
 const active=computed(()=>profile.value.account_status==='active')
-const roleLabel=computed(()=>({student:'Student',teacher:'Teacher',institute_admin:'Institute administrator',super_admin:'Platform administrator'}[profile.value.role]||'Applicant'))
+const roleLabel=computed(()=>applicationRoleLabel(profile.value))
+const sidebarLabel=computed(()=>owner.value?'PLATFORM ADMINISTRATION':workspace.value==='institute-admin'?'INSTITUTE ADMINISTRATION':'YOUR LEARNING SPACE')
 const nav=computed(()=>[
   ['dashboard','LayoutDashboard','Overview'],['classes','BookOpen','Classrooms'],['courses','GraduationCap','Courses'],
   ['schedule','CalendarDays','Schedule'],['attendance','ClipboardCheck','Attendance'],['assignments','NotebookPen','Assignments'],
@@ -75,6 +77,7 @@ async function schedule(){await save('schedule',{...meeting.value,starts_at:new 
 async function review(row,decision){await save('applications/'+row.id+'/review',{decision,institution_id:selectedInstitutions.value[row.id]||null})}
 async function saveProfile(){if(await save('me',{full_name:fullName.value.trim()},'PUT'))fullName.value=profile.value.full_name}
 async function logout(){if(busy.value)return;busy.value=true;try{await logoutSession();emit('logout')}catch(e){error.value=e.message}finally{busy.value=false}}
+watch(()=>props.session.profile,value=>{profile.value={...value};fullName.value=profile.value.full_name})
 onMounted(load)
 </script>
 
@@ -83,7 +86,7 @@ onMounted(load)
     <button v-if="mobile" class="sidebar-overlay" aria-label="Close navigation" @click="mobile=false"></button>
     <aside class="sidebar" :class="{expanded:mobile}">
       <div class="wordmark"><span class="brand-symbol">s</span>sisu<span class="brand-dot">.</span></div>
-      <p class="nav-label">YOUR LEARNING SPACE</p>
+      <p class="nav-label">{{sidebarLabel}}</p>
       <nav aria-label="Workspace"><button v-for="item in nav" :key="item[0]" :class="{active:page===item[0]}" :aria-current="page===item[0]?'page':undefined" @click="navigate(item[0])"><Icon :name="item[1]" :size="19"/>{{item[2]}}</button></nav>
       <div class="connection-label"><Icon name="ShieldCheck" :size="16"/>Supabase workspace</div>
     </aside>

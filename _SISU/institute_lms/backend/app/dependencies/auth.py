@@ -42,7 +42,7 @@ class Principal:
 
     @property
     def role(self) -> str | None:
-        return self.profile.get("role")
+        return self.profile.get("application_role")
 
     @property
     def institution_id(self) -> str | None:
@@ -61,6 +61,7 @@ def runtime_settings(request: Request) -> Settings:
     settings = getattr(request.app.state, "settings", None)
     if settings is None:
         raise RuntimeError("Application settings were not initialized")
+    settings.require_auth()
     return settings
 
 
@@ -152,13 +153,17 @@ def get_current_user(
          if membership.role == role),
         None,
     ) if profile["account_status"] == "active" else None
+    application_role = (
+        "super_admin" if "super_admin" in active_roles else
+        preferred.role if preferred else
+        "student" if profile["account_status"] == "active" and profile["profile_kind"] == "student" else None
+    )
     profile = {
         **profile,
-        "role": (
-            "super_admin" if "super_admin" in active_roles else
-            preferred.role if preferred else
-            "student" if profile["account_status"] == "active" and profile["profile_kind"] == "student" else None
-        ),
+        # profile_kind describes the public profile. application_role is the
+        # server-owned authorization/workspace decision for this request.
+        "application_role": application_role,
+        "role": application_role,
         "institution_id": preferred.institution_id if preferred else None,
         "membership_id": preferred.id if preferred else None,
         "member_code": preferred.member_code if preferred else None,

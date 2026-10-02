@@ -14,9 +14,36 @@ Use the repository root `.env` as the only local environment file:
 Copy-Item .env.example .env
 ```
 
-Set `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, and
-`VITE_API_BASE_URL`. `VITE_` values are public browser configuration. Never
-put a database password or Supabase secret key in a `VITE_` variable.
+Set `VITE_SUPABASE_PROJECT_REF`, `VITE_SUPABASE_URL`,
+`VITE_SUPABASE_PUBLISHABLE_KEY`, and `VITE_API_BASE_URL`. The SISU values are
+pinned to project `yfdettlsvgsslzjjhoxo` and URL
+`https://yfdettlsvgsslzjjhoxo.supabase.co`; startup and browser configuration
+fail closed if a stale project is selected. `VITE_` values are public browser
+configuration. Never put a database password or Supabase secret key in a
+`VITE_` variable.
+
+The backend reads the root `.env` explicitly. Operating-system environment
+variables take precedence, so remove stale values before restarting a local
+shell:
+
+```powershell
+Remove-Item Env:SUPABASE_PROJECT_REF, Env:SUPABASE_URL, Env:VITE_SUPABASE_PROJECT_REF, Env:VITE_SUPABASE_URL -ErrorAction SilentlyContinue
+```
+
+The expected token issuer is
+`https://yfdettlsvgsslzjjhoxo.supabase.co/auth/v1`, and signing keys are read
+from
+`https://yfdettlsvgsslzjjhoxo.supabase.co/auth/v1/.well-known/jwks.json`.
+Tokens must use a supported asymmetric signing algorithm, carry a matching key
+ID, use audience `authenticated`, have a UUID subject, and be unexpired.
+
+`GET /api/me` keeps the public `profile_kind` separate from the server-resolved
+`application_role`. An active `platform_roles.super_admin` grant takes priority
+over a student public profile, while an inactive grant, profile metadata, or a
+login-screen choice grants nothing. The frontend routes its workspace, sidebar,
+and role label from `application_role` only. Returning to the tab or refreshing
+the Supabase token re-reads `/api/me`, so a newly issued or revoked grant does
+not remain hidden behind the earlier browser state.
 
 `SUPABASE_DATABASE_URL` is optional and is used by the read-only database
 verifier. `SUPABASE_SECRET_KEY` is optional and is used only by the live Auth
@@ -38,6 +65,23 @@ npm ci
 npm test
 npm run build:deploy
 ```
+
+After changing an environment value, stop and restart both `uvicorn` and Vite;
+both processes cache configuration. A backend restart also discards any cached
+JWKS client. The validator keeps its JWKS cache below Supabase's edge-cache
+window and retries once with a fresh client when a signing key cannot be found.
+
+If an API request receives `401`, the browser now removes only its local
+Supabase session before returning to sign-in. After deploying this change,
+reload the new frontend bundle and sign in again. This prevents a token from an
+older project or signing-key generation from being replayed from browser
+storage.
+
+`GET http://127.0.0.1:8000/api/health` reports only public diagnostics: the
+configured project ref, host, issuer and JWKS URL. Authentication rejection
+logs contain only allow-listed JWT metadata (algorithm, key ID, claim-match
+booleans and expiry); they never contain the token, authorization header,
+password, subject, or a secret key.
 
 Run `backend/verify_database.py` only after a database URL has been configured.
 Run `backend/verify_live_auth.py` only against a test-safe project with a valid

@@ -12,6 +12,7 @@ const session=ref(null),error=ref(''),busy=ref(true),selected=ref('Student'),sig
 const email=ref(''),password=ref(''),notice=ref(''),showPassword=ref(false)
 const recoverySession=ref(null),newPassword=ref('')
 let authSubscription
+let refreshTimer
 const roles=[{name:'Student',icon:'GraduationCap',text:'Learn, explore and grow.'},{name:'Teacher',icon:'BookOpen',text:'Individual teacher or institute.'},{name:'Admin',icon:'ShieldCheck',text:'Platform or institute administrator.'}]
 async function accept(data){session.value=data;password.value=''}
 async function login(){
@@ -25,16 +26,21 @@ async function google(){error.value='';try{await signInWithGoogle()}catch(e){err
 async function reset(){error.value='';notice.value='';try{if(!email.value)throw Error('Enter your email first.');await requestPasswordReset(email.value);notice.value='Password reset email sent.'}catch(e){error.value=e.message}}
 async function savePassword(){busy.value=true;error.value='';try{const result=await updatePassword(newPassword.value);session.value=null;recoverySession.value=null;newPassword.value='';notice.value=result.message;history.replaceState({},'',location.pathname)}catch(e){error.value=e.message}finally{busy.value=false}}
 async function connect(){busy.value=true;error.value='';try{session.value=await currentSession()}catch(e){session.value=null;if(e.status!==401)error.value=e.message}finally{busy.value=false}}
+async function refreshResolvedRole(){
+  if(!session.value||busy.value)return
+  busy.value=true;error.value=''
+  try{session.value=await currentSession()}catch(e){if(e.status===401)session.value=null;else error.value=e.message}finally{busy.value=false}
+}
 async function authenticated(value){session.value=value;signup.value=false}
 function logout(){session.value=null;recoverySession.value=null}
 function expired(){logout();error.value='Your session expired. Please sign in again.'}
-onMounted(async()=>{if(previewMode)return;window.addEventListener('sisu-session-expired',expired);try{authSubscription=authClient().auth.onAuthStateChange((event)=>{if(event==='PASSWORD_RECOVERY')recoverySession.value=true;if(event==='SIGNED_OUT')logout()}).data.subscription;await connect()}catch(e){error.value=e.message;busy.value=false}})
-onBeforeUnmount(()=>{window.removeEventListener('sisu-session-expired',expired);authSubscription?.unsubscribe()})
+onMounted(async()=>{if(previewMode)return;window.addEventListener('sisu-session-expired',expired);window.addEventListener('focus',refreshResolvedRole);try{authSubscription=authClient().auth.onAuthStateChange((event)=>{if(event==='PASSWORD_RECOVERY')recoverySession.value=true;if(event==='SIGNED_OUT')logout();if(event==='TOKEN_REFRESHED')refreshTimer=setTimeout(refreshResolvedRole,0)}).data.subscription;await connect()}catch(e){error.value=e.message;busy.value=false}})
+onBeforeUnmount(()=>{window.removeEventListener('sisu-session-expired',expired);window.removeEventListener('focus',refreshResolvedRole);clearTimeout(refreshTimer);authSubscription?.unsubscribe()})
 </script>
 <template>
   <Preview v-if="previewMode"/>
   <main v-else-if="recoverySession" class="entry-onboarding"><h1>Choose a new password</h1><p v-if="error" class="error">{{error}}</p><form @submit.prevent="savePassword"><label>New password<input v-model="newPassword" type="password" autocomplete="new-password" minlength="8" maxlength="72" required></label><button class="button primary" :disabled="busy">Update password</button></form></main>
-  <Campus v-else-if="session" :session="session" @session="session=$event" @logout="logout"/>
+  <Campus v-else-if="session" :key="session.profile.id+':'+session.profile.application_role" :session="session" @session="session=$event" @logout="logout"/>
   <Signup v-else-if="signup" :initial-type="selected==='Teacher'?'teacher':'student'" @back="signup=false" @authenticated="authenticated"/>
   <main v-else class="sisu-entry" :class="{'entry-dark':dark}">
     <header><a href="#" class="entry-brand">sisu<span>✦</span></a><div><span class="entry-note">A little space. A world of possibility.</span><button class="entry-icon" @click="dark=!dark" :aria-label="dark?'Light mode':'Dark mode'"><Icon :name="dark?'Sun':'Moon'"/></button></div></header>

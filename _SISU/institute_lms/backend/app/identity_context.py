@@ -41,6 +41,7 @@ def load_identity(client, user_id: str) -> dict[str, Any] | None:
     role = (platform_role or membership.get("role") or ("student" if profile["profile_kind"] == "student" else None)) if approved else None
     return {
         **profile,
+        "application_role": role,
         "role": role,
         "institution_id": membership.get("institution_id"),
         "account_status": "active" if approved else profile_status,

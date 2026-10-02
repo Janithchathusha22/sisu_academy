@@ -98,9 +98,16 @@ class AttendanceUpdate(BaseModel):
 
 @app.get("/api/health")
 def health():
-    configured = bool(settings.supabase_url and settings.supabase_publishable_key)
+    try:
+        settings.require_auth()
+        configured = True
+    except RuntimeError:
+        configured = False
     return {"status": "running", "backend": "FastAPI", "database": "Supabase PostgreSQL", "configured": configured,
             "supabase_host": urlparse(settings.supabase_url).hostname,
+            "supabase_project_ref": settings.supabase_project_ref,
+            "token_issuer": settings.supabase_issuer,
+            "jwks_url": settings.supabase_jwks_url,
             "connectivity_verified": False}
 
 

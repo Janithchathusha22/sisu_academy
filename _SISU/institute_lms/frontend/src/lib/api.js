@@ -1,4 +1,4 @@
-import {authClient} from './supabase'
+import {authClient, clearLocalSession} from './supabase'
 
 const base = (import.meta.env?.VITE_API_BASE_URL || '').replace(/\/$/, '')
 
@@ -33,7 +33,10 @@ export async function api(path, {method = 'GET', body} = {}) {
   }
   if (!response.ok) {
     const detail = await response.json().catch(() => ({}))
-    if (response.status === 401) window.dispatchEvent(new Event('sisu-session-expired'))
+    if (response.status === 401) {
+      await clearLocalSession().catch(() => {})
+      window.dispatchEvent(new Event('sisu-session-expired'))
+    }
     throw new ApiError(typeof detail.detail === 'string' ? detail.detail : `Request failed (${response.status})`, response.status)
   }
   return response.status === 204 ? null : response.json()

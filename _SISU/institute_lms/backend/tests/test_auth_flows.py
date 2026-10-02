@@ -234,8 +234,12 @@ def test_verified_super_admin_routes_from_active_platform_grant(client):
     supabase.rows["platform_roles"] = [{"user_id": UID, "role": "super_admin", "active": True}]
     response = test_client.get("/api/me", headers={"Authorization": "Bearer valid-token"})
     assert response.status_code == 200
-    assert response.json()["role"] == "super_admin"
-    assert response.json()["institution_id"] is None
+    body = response.json()
+    assert body["id"] == UID
+    assert body["profile_kind"] == "student"
+    assert body["application_role"] == "super_admin"
+    assert body["role"] == "super_admin"
+    assert body["institution_id"] is None
     assert test_client.get("/api/applications", headers={"Authorization": "Bearer valid-token"}).status_code == 200
 
 

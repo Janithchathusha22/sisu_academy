@@ -46,10 +46,11 @@ variable.
 ## 2. Configure the FastAPI backend
 
 ```powershell
-cd "C:\Users\Delta\Desktop\sisu_acadamy\sisu_academy\_SISU\institute_lms\backend"
+cd "C:\Users\Delta\Desktop\sisu_acadamy\sisu_academy\_SISU\institute_lms"
 Copy-Item .env.example .env
 notepad .env
 
+cd backend
 py -m venv .venv
 Set-ExecutionPolicy -Scope Process Bypass
 .\.venv\Scripts\Activate.ps1
@@ -58,10 +59,11 @@ python -m pip install -r requirements.txt
 python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-The backend `.env` needs the project URL, publishable key, server-only service
-role key, database URL, and a random session secret of at least 32 characters.
-Authentication requests fail closed when required values are missing. Check
-`http://127.0.0.1:8000/api/health` after startup.
+The one root `.env` contains the public project ref, project URL, publishable
+key and API URL. Optional database and secret keys remain server-only and must
+never use a `VITE_` name. Authentication requests fail closed when required
+values are missing or reference a project other than the pinned SISU project.
+Check `http://127.0.0.1:8000/api/health` after startup.
 
 ## 3. Configure the Vue frontend
 
@@ -69,15 +71,13 @@ Open a second PowerShell window:
 
 ```powershell
 cd "C:\Users\Delta\Desktop\sisu_acadamy\sisu_academy\_SISU\institute_lms\frontend"
-Copy-Item .env.example .env.local
-notepad .env.local
 
 npm.cmd install
 npm.cmd run dev
 ```
 
-Open `http://127.0.0.1:5178/`. The frontend `.env.local` contains only the
-Supabase URL, publishable key and `VITE_API_BASE_URL=http://127.0.0.1:8000`.
+Open `http://127.0.0.1:5178/`. Vite reads the public `VITE_*` values from the
+repository root `.env`; no second frontend environment file is required.
 
 ## Tests
 
