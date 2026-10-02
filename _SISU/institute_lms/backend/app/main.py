@@ -1,6 +1,7 @@
 import httpx
 import psycopg
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import APIRouter, Depends, FastAPI, HTTPException
+from fastapi.routing import APIRoute
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -25,9 +26,25 @@ app.add_middleware(
 )
 from .profiles import router as profiles_router
 from .workspace import router as workspace_router
+from .api import academics, commerce, content, identity, institutions, learning
 
 app.include_router(profiles_router)
 app.include_router(workspace_router)
+# The resource routers use paths such as /me, /courses and /classes that also
+# exist in the connected v1 API. Expose their scoped read operations under v2.
+# Mutations need separate approval-flow and RLS review before activation.
+resource_reads = APIRouter(prefix="/api/v2", tags=["resource reads"])
+for resource_router in (
+    identity.router, institutions.router,
+    learning.router, academics.router, commerce.router, content.router,
+):
+    for route in resource_router.routes:
+        if isinstance(route, APIRoute) and route.methods == {"GET"}:
+            resource_reads.add_api_route(
+                route.path, route.endpoint, methods=["GET"],
+                response_model=route.response_model, tags=route.tags,
+            )
+app.include_router(resource_reads)
 
 
 @app.exception_handler(RuntimeError)

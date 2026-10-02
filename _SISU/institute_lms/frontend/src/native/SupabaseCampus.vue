@@ -4,10 +4,12 @@ import Icon from '../Icon.vue'
 import Art from '../Art.vue'
 import {api,currentSession,logoutSession} from '../lib/api'
 import {applicationRole,applicationRoleLabel,canOpenWorkspacePage,workspaceKind} from '../lib/workspace'
+import {loadSections} from '../lib/section-loading'
 
 const props=defineProps({session:{type:Object,required:true}})
 const emit=defineEmits(['logout','session'])
 const page=ref('dashboard'),mobile=ref(false),busy=ref(false),loaded=ref(false),error=ref(''),message=ref('')
+const loadErrors=ref({}),learningError=ref(''),learningBusy=ref(false)
 const data=ref({}),profile=ref({...props.session.profile}),fullName=ref(profile.value.full_name)
 const role=computed(()=>applicationRole(profile.value))
 const manager=computed(()=>['teacher','institute_admin','super_admin'].includes(role.value))
@@ -16,15 +18,15 @@ const owner=computed(()=>role.value==='super_admin')
 const workspace=computed(()=>workspaceKind(profile.value))
 const active=computed(()=>profile.value.account_status==='active')
 const roleLabel=computed(()=>applicationRoleLabel(profile.value))
-const sidebarLabel=computed(()=>owner.value?'PLATFORM ADMINISTRATION':workspace.value==='institute-admin'?'INSTITUTE ADMINISTRATION':'YOUR LEARNING SPACE')
+const sidebarLabel=computed(()=>owner.value?'PLATFORM ADMINISTRATION':workspace.value==='institute-admin'?'INSTITUTE ADMINISTRATION':role.value==='teacher'?'YOUR TEACHING SPACE':'YOUR LEARNING SPACE')
 const nav=computed(()=>[
-  ['dashboard','LayoutDashboard','Overview'],['classes','BookOpen','Classrooms'],['courses','GraduationCap','Courses'],
+  ['dashboard','LayoutDashboard','Overview'],['classes','BookOpen','Classrooms'],['courses','GraduationCap','Courses'],['learning','BookOpen','Lessons'],
   ['schedule','CalendarDays','Schedule'],['attendance','ClipboardCheck','Attendance'],['assignments','NotebookPen','Assignments'],
   ['materials','BookOpen','Materials'],['exams','GraduationCap','Exams'],['results','Award','Results'],
   ['payments','CreditCard','Payments'],['notifications','Bell','Updates'],
   ...(owner.value?[['approvals','Users','People & approvals']]:[]),
   ...(workspace.value==='institute-admin'?[['management','Users','Institute management']]:[]),
-  ['profile','IdCard','My profile']])
+  ['profile','IdCard','My profile']].filter(item=>canOpenWorkspacePage(profile.value,item[0])))
 const title=computed(()=>nav.value.find(n=>n[0]===page.value)?.[2]||'Workspace')
 const rows=computed(()=>data.value[page.value]||[])
 const stats=computed(()=>[['Classrooms',data.value.classes?.length],['Courses',data.value.courses?.length],['Attendance records',data.value.attendance?.length]])
@@ -36,6 +38,7 @@ const register=ref({class_session_id:'',student_id:'',status:'present',note:''})
 const meeting=ref({class_id:'',title:'',starts_at:'',ends_at:''})
 const newInstitution=ref({title:'',code:''})
 const selectedInstitutions=ref({})
+const selectedCourse=ref(''),selectedModule=ref(''),modules=ref([]),lessons=ref([])
 const availableCourses=computed(()=>(data.value.courses||[]).filter(r=>r.institution_id===institution.value))
 const availableTeachers=computed(()=>(data.value.teachers||[]).filter(r=>r.institution_id===institution.value))
 const institutionClasses=computed(()=>(data.value.classes||[]).filter(r=>r.institution_id===institution.value))
@@ -60,9 +63,25 @@ async function load(){
     if(manager.value)paths.push('students','teachers')
     if(admin.value)paths.push('institutions')
     if(owner.value)paths.push('applications','profiles/unassigned')
-    const result=await Promise.all(paths.map(p=>api('/api/'+p)))
-    data.value=Object.fromEntries(paths.map((p,i)=>[p,result[i]]));loaded.value=true
+    const {values,errors,authError}=await loadSections(paths,path=>api('/api/'+path))
+    if(authError)throw authError
+    data.value=Object.fromEntries(paths.map(path=>[path,path in values?values[path]:[]]));loadErrors.value=errors;loaded.value=true
+    if(!selectedCourse.value&&data.value.courses?.length)selectedCourse.value=data.value.courses[0].id
   }catch(e){data.value={};error.value=e.message}finally{busy.value=false}
+}
+async function loadModules(){
+  selectedModule.value='';modules.value=[];lessons.value=[];learningError.value=''
+  if(!selectedCourse.value)return
+  learningBusy.value=true
+  try{modules.value=await api('/api/v2/modules?course_id='+encodeURIComponent(selectedCourse.value));if(modules.value.length)selectedModule.value=modules.value[0].id}
+  catch(e){learningError.value=e.message}finally{learningBusy.value=false}
+}
+async function loadLessons(){
+  lessons.value=[];learningError.value=''
+  if(!selectedModule.value)return
+  learningBusy.value=true
+  try{lessons.value=await api('/api/v2/lessons?module_id='+encodeURIComponent(selectedModule.value))}
+  catch(e){learningError.value=e.message}finally{learningBusy.value=false}
 }
 async function save(path,body,method='POST'){
   if(busy.value)return false
@@ -78,6 +97,8 @@ async function review(row,decision){await save('applications/'+row.id+'/review',
 async function saveProfile(){if(await save('me',{full_name:fullName.value.trim()},'PUT'))fullName.value=profile.value.full_name}
 async function logout(){if(busy.value)return;busy.value=true;try{await logoutSession();emit('logout')}catch(e){error.value=e.message}finally{busy.value=false}}
 watch(()=>props.session.profile,value=>{profile.value={...value};fullName.value=profile.value.full_name})
+watch(selectedCourse,loadModules)
+watch(selectedModule,loadLessons)
 onMounted(load)
 </script>
 
@@ -95,6 +116,8 @@ onMounted(load)
       <main id="main-content" :aria-busy="busy">
         <div class="page-heading"><div><span class="eyebrow">YOUR EVERYDAY, A LITTLE BRIGHTER</span><h1>{{page==='dashboard'?'Hello, '+(profile.full_name||'there'):title}} <span class="greeting-spark">✺</span></h1><p>Your classes. Your people. Your own pace.</p></div><button class="button subtle" :disabled="busy" @click="load">{{busy?'Loading…':'Refresh'}}</button></div>
         <p v-if="error" class="connection-error" role="alert">{{error}} <button :disabled="busy" @click="load">Retry</button></p>
+        <p v-if="Object.keys(loadErrors).length" class="connection-note" role="status">Some sections could not load: {{Object.keys(loadErrors).join(', ')}}. The available sections remain usable. <button :disabled="busy" @click="load">Retry</button></p>
+        <p v-if="loadErrors[page]" class="connection-error" role="alert">{{loadErrors[page]}}</p>
         <p v-if="message" class="connection-success" role="status">{{message}}</p>
         <section v-if="page==='profile'" class="panel"><h2>Your account</h2><p>{{session.user.email}} · {{roleLabel}} · {{profile.account_status}}</p><form @submit.prevent="saveProfile"><label>Full name<input v-model="fullName" required maxlength="120"></label><button class="button primary" :disabled="busy||!fullName?.trim()">Save profile</button></form><p>Roles and institution membership can only be changed by an authorized administrator.</p></section>
         <section v-else-if="!active" class="panel"><h2>{{profile.account_status==='pending'?'Awaiting approval':'Account '+profile.account_status}}</h2><p>Your account exists, but access to LMS records is not active. Contact the administrator. Refresh after your application is reviewed.</p></section>
@@ -104,9 +127,13 @@ onMounted(load)
           <template v-if="page==='dashboard'">
             <section v-if="owner" class="panel"><h2>Platform administrator</h2><p>Review provider applications, create institutions, and assign verified students.</p><button class="button primary" @click="navigate('approvals')">Open People & approvals</button><p>{{data.applications?.length||0}} pending provider applications · {{data['profiles/unassigned']?.length||0}} students awaiting assignment</p></section>
             <section v-else-if="workspace==='institute-admin'" class="panel"><h2>Institute administrator</h2><p>Manage classrooms and your institution's teaching records.</p><button class="button primary" @click="navigate('management')">Open institute management</button><p>{{data.students?.length||0}} students · {{data.teachers?.length||0}} teachers</p></section>
-            <section class="hero"><div class="hero-copy"><span class="hero-label">YOUR SPACE TO GROW</span><h2>A little progress.<br>A world of possibility.</h2><p>Your learning and teaching, together in one place.</p><button class="button dark" @click="navigate('classes')">Your classrooms <Icon name="ArrowRight" :size="17"/></button></div><Art/></section>
+            <section v-else-if="role==='teacher'" class="panel"><h2>Teaching workspace</h2><p>Manage your courses, lessons, schedule and attendance for your assigned institution.</p><button class="button primary" @click="navigate('courses')">Open courses</button></section>
+            <section v-if="role==='student'" class="hero"><div class="hero-copy"><span class="hero-label">YOUR SPACE TO GROW</span><h2>A little progress.<br>A world of possibility.</h2><p>Your learning and teaching, together in one place.</p><button class="button dark" @click="navigate('classes')">Your classrooms <Icon name="ArrowRight" :size="17"/></button></div><Art/></section>
             <div class="stats-row"><div v-for="stat in stats" :key="stat[0]" class="stat-card"><span class="stat-icon violet"><Icon name="BookOpen"/></span><div><strong>{{loaded?stat[1]:'—'}}</strong><span>{{stat[0]}}</span></div></div></div>
             <div class="connected-grid"><section class="panel"><h2>Coming up</h2><article v-for="r in (data.schedule||[]).filter(s=>new Date(s.ends_at)>new Date()).sort((a,b)=>a.starts_at.localeCompare(b.starts_at)).slice(0,5)" :key="r.id" class="data-row"><h3>{{r.title}}</h3><p>{{className(r.class_id)}} · {{date(r.starts_at)}}</p></article><p v-if="loaded&&!(data.schedule||[]).some(s=>new Date(s.ends_at)>new Date())">No upcoming sessions.</p></section><section class="panel"><h2>Your workspace</h2><p>Use the sidebar for your course, schedule and learning records.</p><p>Lists show up to 200 recent records. Counts describe the loaded records, not institution-wide totals.</p><p>Legacy marketplace, wallet, AI papers and community screens are retained in the separate preview; those integrations are not live in Supabase yet.</p></section></div>
+          </template>
+          <template v-else-if="page==='learning'">
+            <section class="panel"><h2>Courses and lessons</h2><label>Course<select v-model="selectedCourse"><option value="">Choose a course</option><option v-for="r in data.courses||[]" :key="r.id" :value="r.id">{{r.title}}</option></select></label><label v-if="modules.length">Module<select v-model="selectedModule"><option v-for="r in modules" :key="r.id" :value="r.id">{{r.title}}</option></select></label><p v-if="learningBusy">Loading lessons…</p><p v-if="learningError" class="connection-error" role="alert">{{learningError}}</p><p v-if="loaded&&!data.courses?.length">No courses are available for your account.</p><p v-if="selectedCourse&&!modules.length&&!learningBusy&&!learningError">This course has no visible modules yet.</p><article v-for="r in lessons" :key="r.id" class="data-row"><h3>{{r.title}}</h3><p>{{r.description||'No description yet.'}}</p><a v-if="r.video_url" :href="r.video_url" target="_blank" rel="noopener noreferrer">Open video</a></article><p v-if="selectedModule&&!lessons.length&&!learningBusy&&!learningError">No lessons are available in this module yet.</p></section>
           </template>
           <template v-else-if="page==='management'&&workspace==='institute-admin'">
             <section class="panel"><h2>Your institution</h2><article v-for="r in data.institutions||[]" :key="r.id" class="data-row"><h3>{{r.title}}</h3><p>{{r.code}}</p></article><p v-if="loaded&&!data.institutions?.length">No active institution is available.</p></section>

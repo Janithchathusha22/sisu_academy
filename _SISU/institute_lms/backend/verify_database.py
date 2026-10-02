@@ -21,6 +21,7 @@ REQUIRED_COLUMNS = {
 REQUIRED_POLICIES = {
     ("profiles", "profiles_own_select"),
     ("profiles", "profiles_own_update"),
+    ("profiles", "profiles_verified_students_platform_select"),
     ("account_applications", "applications_read_own"),
     ("institution_memberships", "active_profile"),
     ("courses", "active_profile"),

@@ -13,6 +13,14 @@ The database verifier is read-only and prints a JSON report without credentials
 or row contents. The live Auth verifier creates temporary users and requires a
 server secret so it can always clean them up.
 
+The verifier requires the
+`profiles_verified_students_platform_select` policy. Its additive definition is
+in `supabase/migrations/202610020002_platform_student_profile_visibility.sql`;
+the SQL smoke test confirms that a verified platform administrator can see
+verified student profiles while an ordinary student cannot list other student
+profiles.
+
 Never infer that local migration success means the hosted schema already
 matches. Back up and compare the hosted project before applying migrations;
-do not run `db reset` against a hosted project.
+review the hosted migration history and apply pending migrations to a staging
+project first. Do not reset or overwrite an existing hosted database.

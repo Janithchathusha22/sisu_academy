@@ -112,6 +112,15 @@ def test_valid_bearer_token_loads_verified_profile(client):
     assert response.json()["role"] == "student"
 
 
+def test_resource_read_routes_use_v2_without_colliding_with_connected_api(client):
+    test_client, _ = client
+    assert test_client.get("/api/courses").status_code == 401
+    assert test_client.get(
+        "/api/v2/modules", params={"course_id": UID}
+    ).status_code == 401
+    assert test_client.post("/api/v2/modules").status_code == 405
+
+
 @pytest.mark.parametrize("header", [None, "Basic value", "Bearer "])
 def test_missing_or_malformed_bearer_is_rejected(client, header):
     test_client, _ = client

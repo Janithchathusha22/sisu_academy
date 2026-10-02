@@ -171,6 +171,9 @@ on conflict (id) do update set
   profile_kind = excluded.profile_kind,
   status = excluded.status;
 
+insert into public.platform_roles (user_id, role, active)
+values ('10000000-0000-0000-0000-000000000001', 'super_admin', true);
+
 insert into public.institutions (id, owner_user_id, code, title)
 values
   ('20000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001', 'TSTA', 'Test Academy A'),
@@ -250,6 +253,11 @@ select pg_temp.assert_true(
   'student sees only their institution'
 );
 select pg_temp.assert_true(
+  (select count(*) = 1 from public.profiles
+   where profile_kind = 'student' and status = 'verified'),
+  'student cannot list other verified student profiles'
+);
+select pg_temp.assert_true(
   (select count(*) = 1 from public.materials),
   'paid enrolled student can read private material metadata'
 );
@@ -295,6 +303,22 @@ select pg_temp.assert_true(
   (select count(*) = 0 from public.invoices),
   'teaching access does not expose student invoices'
 );
+
+reset role;
+set local role authenticated;
+select set_config('request.jwt.claim.role', 'authenticated', true);
+select set_config('request.jwt.claim.sub', '10000000-0000-0000-0000-000000000001', true);
+
+select pg_temp.assert_true(
+  (select count(*) = 2 from public.profiles
+   where profile_kind = 'student' and status = 'verified'),
+  'platform administrator can list verified student profiles for assignment'
+);
+
+reset role;
+set local role authenticated;
+select set_config('request.jwt.claim.role', 'authenticated', true);
+select set_config('request.jwt.claim.sub', '10000000-0000-0000-0000-000000000002', true);
 
 insert into public.attendance (
   institution_id, class_id, class_session_id, student_membership_id,

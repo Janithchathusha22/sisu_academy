@@ -36,6 +36,23 @@ from
 `https://yfdettlsvgsslzjjhoxo.supabase.co/auth/v1/.well-known/jwks.json`.
 Tokens must use a supported asymmetric signing algorithm, carry a matching key
 ID, use audience `authenticated`, have a UUID subject, and be unexpired.
+The backend also validates the JWT `iat` and `nbf` timestamps against system
+UTC. When a token is rejected as not-yet-valid, safe diagnostics log the server
+UTC time and how far either claim is ahead; they do not log the token or user
+ID. On Windows, compare that UTC time with `Get-Date -AsUTC`. If the Windows
+Time service is stopped or the offset is nonzero, run these commands in an
+elevated PowerShell session, then restart FastAPI and sign in again:
+
+```powershell
+Set-Service -Name W32Time -StartupType Automatic
+Start-Service -Name W32Time
+w32tm /resync /force
+w32tm /query /status
+Get-Date -AsUTC
+```
+
+Do not disable signature, `iat`, `nbf`, or expiry validation to work around
+clock skew.
 
 `GET /api/me` keeps the public `profile_kind` separate from the server-resolved
 `application_role`. An active `platform_roles.super_admin` grant takes priority

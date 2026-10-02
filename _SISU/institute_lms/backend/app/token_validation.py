@@ -13,6 +13,7 @@ from jwt.exceptions import (
     InvalidAudienceError,
     InvalidIssuerError,
     InvalidTokenError,
+    ImmatureSignatureError,
     PyJWKClientConnectionError,
     PyJWKClientError,
     PyJWTError,
@@ -53,6 +54,9 @@ def safe_token_diagnostics(token: str, settings: Settings) -> dict[str, object]:
         )
         audience = claims.get("aud")
         expires = claims.get("exp")
+        issued = claims.get("iat")
+        not_before = claims.get("nbf")
+        server_now = datetime.now(timezone.utc)
         try:
             UUID(str(claims.get("sub")))
             subject_is_uuid = True
@@ -73,8 +77,11 @@ def safe_token_diagnostics(token: str, settings: Settings) -> dict[str, object]:
             ),
             "is_expired": (
                 not isinstance(expires, (int, float))
-                or expires <= datetime.now(timezone.utc).timestamp()
+                or expires <= server_now.timestamp()
             ),
+            "server_utc": server_now.isoformat(),
+            "iat_seconds_ahead": round(issued - server_now.timestamp()) if isinstance(issued, (int, float)) else None,
+            "nbf_seconds_ahead": round(not_before - server_now.timestamp()) if isinstance(not_before, (int, float)) else None,
         })
     except (PyJWTError, ValueError, TypeError):
         result["metadata_readable"] = False
@@ -142,6 +149,9 @@ def validate_access_token(token: str, settings: Settings) -> dict:
     except InvalidAudienceError as exc:
         _log_rejection(token, settings, exc)
         raise HTTPException(401, "Sign-in session has an invalid audience") from exc
+    except ImmatureSignatureError as exc:
+        _log_rejection(token, settings, exc)
+        raise HTTPException(401, "Sign-in session is not valid yet; check this computer's UTC clock") from exc
     except (PyJWTError, ValueError) as exc:
         _log_rejection(token, settings, exc)
         raise HTTPException(401, "Sign-in session signature or claims are invalid") from exc

@@ -46,6 +46,36 @@ def test_valid_es256_access_token(signing):
     assert token_validation.validate_access_token(token, settings)["sub"] == claims["sub"]
 
 
+def test_future_issued_at_reports_clock_issue_without_accepting_token(signing):
+    key, settings, claims = signing
+    token = jwt.encode(
+        {**claims, "iat": datetime.now(timezone.utc) + timedelta(minutes=10)},
+        key, algorithm="ES256", headers={"kid": KEY_ID},
+    )
+    diagnostics = token_validation.safe_token_diagnostics(token, settings)
+    assert diagnostics["iat_seconds_ahead"] > 500
+    assert token not in repr(diagnostics)
+    with pytest.raises(HTTPException) as error:
+        token_validation.validate_access_token(token, settings)
+    assert error.value.status_code == 401
+    assert "UTC clock" in error.value.detail
+
+
+def test_future_not_before_reports_clock_issue_without_accepting_token(signing):
+    key, settings, claims = signing
+    token = jwt.encode(
+        {**claims, "nbf": datetime.now(timezone.utc) + timedelta(minutes=10)},
+        key, algorithm="ES256", headers={"kid": KEY_ID},
+    )
+    diagnostics = token_validation.safe_token_diagnostics(token, settings)
+    assert diagnostics["nbf_seconds_ahead"] > 500
+    assert token not in repr(diagnostics)
+    with pytest.raises(HTTPException) as error:
+        token_validation.validate_access_token(token, settings)
+    assert error.value.status_code == 401
+    assert "UTC clock" in error.value.detail
+
+
 @pytest.mark.parametrize("change", [
     {"iss": "https://other.supabase.co/auth/v1"},
     {"aud": "anon"},
