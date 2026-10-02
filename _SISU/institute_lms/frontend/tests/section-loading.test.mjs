@@ -20,3 +20,13 @@ test('an expired session is still reported as an authentication failure',async()
 
   assert.equal(result.authError,expired)
 })
+
+test('forbidden and unavailable sections show actionable status messages',async()=>{
+  const forbidden=Object.assign(new Error('Permission denied'),{status:403})
+  const unavailable=Object.assign(new Error('Service unavailable'),{status:503})
+  const result=await loadSections(['profiles/unassigned','admin/overview'],path=>
+    Promise.reject(path==='profiles/unassigned'?forbidden:unavailable))
+
+  assert.equal(result.errors['profiles/unassigned'],'Your account is not permitted to view this section.')
+  assert.equal(result.errors['admin/overview'],'The server or Supabase is unavailable. Try again shortly.')
+})

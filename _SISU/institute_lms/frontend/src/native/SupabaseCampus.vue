@@ -19,12 +19,13 @@ const workspace=computed(()=>workspaceKind(profile.value))
 const active=computed(()=>profile.value.account_status==='active')
 const roleLabel=computed(()=>applicationRoleLabel(profile.value))
 const sidebarLabel=computed(()=>owner.value?'PLATFORM ADMINISTRATION':workspace.value==='institute-admin'?'INSTITUTE ADMINISTRATION':role.value==='teacher'?'YOUR TEACHING SPACE':'YOUR LEARNING SPACE')
-const nav=computed(()=>[
+const nav=computed(()=>owner.value?[
+  ['dashboard','LayoutDashboard','Overview'],['institutions','Landmark','Institutions'],['approvals','Users','People & approvals'],
+  ['profile','IdCard','My profile']]:[
   ['dashboard','LayoutDashboard','Overview'],['classes','BookOpen','Classrooms'],['courses','GraduationCap','Courses'],['learning','BookOpen','Lessons'],
   ['schedule','CalendarDays','Schedule'],['attendance','ClipboardCheck','Attendance'],['assignments','NotebookPen','Assignments'],
   ['materials','BookOpen','Materials'],['exams','GraduationCap','Exams'],['results','Award','Results'],
   ['payments','CreditCard','Payments'],['notifications','Bell','Updates'],
-  ...(owner.value?[['approvals','Users','People & approvals']]:[]),
   ...(workspace.value==='institute-admin'?[['management','Users','Institute management']]:[]),
   ['profile','IdCard','My profile']].filter(item=>canOpenWorkspacePage(profile.value,item[0])))
 const title=computed(()=>nav.value.find(n=>n[0]===page.value)?.[2]||'Workspace')
@@ -53,12 +54,6 @@ function navigate(id){if(!canOpenWorkspacePage(profile.value,id))return;page.val
 function className(id){return data.value.classes?.find(c=>c.id===id)?.title||id}
 function studentName(id){return data.value.students?.find(s=>s.id===id)?.student_code||id}
 function date(value){return value?new Date(value).toLocaleString():'Not scheduled'}
-async function loadAdminOverview(){
-  if(!owner.value)return
-  adminOverviewError.value=''
-  try{adminOverview.value=await api('/api/admin/overview')}
-  catch(e){adminOverviewError.value=e.message;adminOverview.value=null}
-}
 async function load(){
   busy.value=true;error.value='';loaded.value=false
   try{
@@ -66,15 +61,22 @@ async function load(){
     if(!canOpenWorkspacePage(profile.value,page.value))page.value='dashboard'
     if(workspace.value==='institute-admin')institution.value=profile.value.institution_id
     if(!active.value){data.value={};loaded.value=true;return}
-    const paths=['courses','classes','schedule','attendance','enrollments','assignments','materials','exams','results','payments','notifications']
-    if(manager.value)paths.push('students','teachers')
-    if(admin.value)paths.push('institutions')
-    if(owner.value)paths.push('applications','profiles/unassigned')
+    const paths=owner.value
+      ? ['admin/overview','institutions','applications','profiles/unassigned']
+      : ['courses','classes','schedule','attendance','enrollments','assignments','materials','exams','results','payments','notifications']
+    if(!owner.value&&manager.value)paths.push('students','teachers')
+    if(!owner.value&&admin.value)paths.push('institutions')
     const {values,errors,authError}=await loadSections(paths,path=>api('/api/'+path))
     if(authError)throw authError
     data.value=Object.fromEntries(paths.map(path=>[path,path in values?values[path]:[]]));loadErrors.value=errors;loaded.value=true
+    adminOverview.value=values['admin/overview']||null
+    adminOverviewError.value=errors['admin/overview']||''
+    if(owner.value){
+      selectedInstitutions.value={}
+      for(const row of data.value.applications||[])if(data.value.institutions?.length)selectedInstitutions.value[row.id]=data.value.institutions[0].id
+      for(const row of data.value['profiles/unassigned']||[])if(data.value.institutions?.length)selectedInstitutions.value[row.id]=data.value.institutions[0].id
+    }
     if(!selectedCourse.value&&data.value.courses?.length)selectedCourse.value=data.value.courses[0].id
-    await loadAdminOverview()
   }catch(e){data.value={};error.value=e.message}finally{busy.value=false}
 }
 async function loadModules(){
@@ -98,6 +100,7 @@ async function save(path,body,method='POST'){
   catch(e){error.value=e.message;return false}finally{busy.value=false}
 }
 async function createCourse(){if(await save('courses',{...course.value,institution_id:institution.value}))course.value={title:'',description:''}}
+async function createInstitution(){if(await save('institutions',newInstitution.value))newInstitution.value={title:'',code:''}}
 async function createClass(){if(await save('classes',{...classroom.value,institution_id:institution.value,course_id:classroom.value.course_id||null,teacher_id:classroom.value.teacher_id||null}))classroom.value={title:'',subject:'',course_id:'',teacher_id:''}}
 async function record(){await save('attendance',register.value)}
 async function schedule(){await save('schedule',{...meeting.value,starts_at:new Date(meeting.value.starts_at).toISOString(),ends_at:new Date(meeting.value.ends_at).toISOString()})}
@@ -129,6 +132,66 @@ onMounted(load)
         <p v-if="message" class="connection-success" role="status">{{message}}</p>
         <section v-if="page==='profile'" class="panel"><h2>Your account</h2><p>{{session.user.email}} · {{roleLabel}} · {{profile.account_status}}</p><form @submit.prevent="saveProfile"><label>Full name<input v-model="fullName" required maxlength="120"></label><button class="button primary" :disabled="busy||!fullName?.trim()">Save profile</button></form><p>Roles and institution membership can only be changed by an authorized administrator.</p></section>
         <section v-else-if="!active" class="panel"><h2>{{profile.account_status==='pending'?'Awaiting approval':'Account '+profile.account_status}}</h2><p>Your account exists, but access to LMS records is not active. Contact the administrator. Refresh after your application is reviewed.</p></section>
+        <template v-else-if="owner">
+          <template v-if="page==='dashboard'">
+            <section class="panel admin-welcome"><span class="eyebrow">CONNECTED PLATFORM CONTROL</span><h2>Super Admin workspace</h2><p>Manage real SISU institutions, review account applications, and assign verified students. This dashboard uses your authenticated Supabase session.</p></section>
+            <section class="panel">
+              <h2>Platform overview</h2>
+              <p v-if="busy&&!adminOverview" role="status">Loading platform totals…</p>
+              <div v-else-if="adminOverview" class="stats-row admin-overview-stats">
+                <div class="stat-card"><strong>{{adminOverview.institutions}}</strong><span>Institutions</span></div>
+                <div class="stat-card"><strong>{{adminOverview.active_students}}</strong><span>Students</span><small>{{adminOverview.verified_students}} verified</small></div>
+                <div class="stat-card"><strong>{{adminOverview.active_teachers}}</strong><span>Teachers</span><small>Active memberships</small></div>
+                <div class="stat-card"><strong>{{adminOverview.pending_applications}}</strong><span>Pending applications</span></div>
+              </div>
+              <div v-if="adminOverviewError" class="connection-error" role="alert">{{adminOverviewError}} <button :disabled="busy" @click="load">Retry</button></div>
+            </section>
+            <div class="connected-grid admin-shortcuts">
+              <section class="panel"><h2>Institutions</h2><p>{{adminOverview?.institutions??'—'}} connected institutions</p><button class="button primary" @click="navigate('institutions')">Manage institutions</button></section>
+              <section class="panel"><h2>People &amp; approvals</h2><p>{{adminOverview?.pending_applications??'—'}} provider applications · {{data['profiles/unassigned']?.length??'—'}} students awaiting assignment</p><button class="button primary" @click="navigate('approvals')">Review people</button></section>
+            </div>
+          </template>
+          <template v-else-if="page==='institutions'">
+            <form class="panel admin-form" @submit.prevent="createInstitution">
+              <h2>Create institution</h2>
+              <label>Name<input v-model.trim="newInstitution.title" required maxlength="120"></label>
+              <label>Unique code<input v-model.trim="newInstitution.code" required pattern="[A-Z][A-Z0-9]{1,11}" minlength="2" maxlength="12" placeholder="SISU01"></label>
+              <button class="button primary" :disabled="busy">Create institution</button>
+            </form>
+            <section class="panel">
+              <h2>Connected institutions</h2>
+              <p v-if="busy&&!loaded" role="status">Loading institutions…</p>
+              <p v-if="loadErrors.institutions" class="connection-error" role="alert">{{loadErrors.institutions}}</p>
+              <article v-for="row in data.institutions||[]" :key="row.id" class="data-row"><h3>{{row.title}}</h3><p>{{row.code}} · {{row.id}}</p></article>
+              <p v-if="loaded&&!loadErrors.institutions&&!data.institutions?.length">No institutions have been created yet.</p>
+            </section>
+          </template>
+          <template v-else-if="page==='approvals'">
+            <section class="panel">
+              <h2>Provider applications</h2>
+              <p v-if="busy&&!loaded" role="status">Loading applications…</p>
+              <p v-if="loadErrors.applications" class="connection-error" role="alert">{{loadErrors.applications}}</p>
+              <article v-for="row in data.applications||[]" :key="row.id" class="data-row">
+                <h3>{{row.details?.full_name||row.user_id}} · {{row.account_type}}</h3>
+                <p>{{row.details?.organization||row.details?.subject||row.details?.email}}</p>
+                <label>Institution<select v-model="selectedInstitutions[row.id]" required><option value="" disabled>Select institution</option><option v-for="item in data.institutions||[]" :key="item.id" :value="item.id">{{item.title}}</option></select></label>
+                <div class="actions"><button class="button primary" :disabled="busy||!selectedInstitutions[row.id]" @click="review(row,'approved')">Approve</button><button class="button subtle" :disabled="busy" @click="review(row,'rejected')">Reject</button></div>
+              </article>
+              <p v-if="loaded&&!loadErrors.applications&&!data.applications?.length">No provider applications are waiting for review.</p>
+            </section>
+            <section class="panel">
+              <h2>Assign verified students</h2>
+              <p>Assigning a student creates their institution membership; it does not grant platform administration.</p>
+              <p v-if="loadErrors['profiles/unassigned']" class="connection-error" role="alert">{{loadErrors['profiles/unassigned']}} If this is a profile visibility permission error, review the additive student-visibility migration before applying it.</p>
+              <article v-for="row in data['profiles/unassigned']||[]" :key="row.id" class="data-row">
+                <h3>{{row.full_name||row.email}}</h3><p>{{row.email}}</p>
+                <label>Institution<select v-model="selectedInstitutions[row.id]" required><option value="" disabled>Select institution</option><option v-for="item in data.institutions||[]" :key="item.id" :value="item.id">{{item.title}}</option></select></label>
+                <button class="button primary" :disabled="busy||!selectedInstitutions[row.id]" @click="save('profiles/'+row.id+'/institution',{institution_id:selectedInstitutions[row.id]})">Assign student</button>
+              </article>
+              <p v-if="loaded&&!loadErrors['profiles/unassigned']&&!data['profiles/unassigned']?.length">No verified unassigned students.</p>
+            </section>
+          </template>
+        </template>
         <template v-else>
           <p v-if="!profile.institution_id&&!owner" class="connection-note">Your account is active but has no institution assigned yet. An administrator must link your membership before classes become available.</p>
           <label v-if="owner&&['courses','classes'].includes(page)" class="institution-picker">Institution<select v-model="institution"><option value="" disabled>Choose institution</option><option v-for="r in data.institutions" :key="r.id" :value="r.id">{{r.title}}</option></select></label>

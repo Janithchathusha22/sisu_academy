@@ -18,6 +18,7 @@ test('verified student profile uses the backend-resolved super admin workspace a
   assert.equal(applicationRoleLabel(owner),'Platform administrator')
   assert.equal(workspaceKind(owner),'platform-admin')
   assert.equal(canOpenWorkspacePage(owner,'approvals'),true)
+  assert.equal(canOpenWorkspacePage(owner,'institutions'),true)
 })
 
 test('profile kind and legacy role cannot grant the admin workspace',()=>{
@@ -36,6 +37,18 @@ test('students and unapproved users cannot open admin pages',()=>{
     assert.equal(canOpenWorkspacePage(profile,'management'),false)
   }
   assert.equal(workspaceKind(active('institute_admin')),'member')
+})
+
+test('real Supabase super admin has a dedicated connected workspace, not the preview UI',async()=>{
+  const source=await readFile(new URL('../src/native/SupabaseCampus.vue',import.meta.url),'utf8')
+  assert.match(source,/owner\.value\?\[/)
+  assert.match(source,/\['institutions','Landmark','Institutions'\]/)
+  assert.match(source,/\['approvals','Users','People & approvals'\]/)
+  assert.match(source,/api\('\/api\/'\+path\)/)
+  assert.match(source,/Super Admin workspace/)
+  assert.match(source,/Assign verified students/)
+  assert.match(source,/adminOverview\.active_students/)
+  assert.doesNotMatch(source,/PreviewShell|requestRoute|from '\.\/SuperAdmin\.vue'/)
 })
 
 test('admin selection never supplies the application role',async()=>{

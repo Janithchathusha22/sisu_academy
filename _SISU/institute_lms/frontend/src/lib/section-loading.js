@@ -10,7 +10,14 @@ export async function loadSections(paths, request) {
       values[path] = response.value
       return
     }
-    errors[path] = response.reason?.message || 'This section could not load.'
+    const status = response.reason?.status
+    errors[path] = status === 403
+      ? 'Your account is not permitted to view this section.'
+      : status === 503
+        ? 'The server or Supabase is unavailable. Try again shortly.'
+        : status === 0
+          ? 'Cannot connect to the server. Check that the backend is running.'
+          : response.reason?.message || 'This section could not load.'
     if (response.reason?.status === 401) authError ||= response.reason
   })
 

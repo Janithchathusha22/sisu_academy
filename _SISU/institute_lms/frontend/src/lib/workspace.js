@@ -5,7 +5,7 @@ const ROLE_PAGES = {
   student: new Set([...SHARED_LEARNING,'payments']),
   teacher: new Set(SHARED_LEARNING),
   institute_admin: new Set([...SHARED_LEARNING,'payments','management']),
-  super_admin: new Set([...SHARED_LEARNING,'payments','approvals']),
+  super_admin: new Set(['dashboard','institutions','approvals','profile']),
 }
 
 export function applicationRole(profile) {
