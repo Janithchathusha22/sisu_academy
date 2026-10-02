@@ -24,10 +24,12 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type", "X-CSRF-Token"],
 )
+from .admin import router as admin_router
 from .profiles import router as profiles_router
 from .workspace import router as workspace_router
 from .api import academics, commerce, content, identity, institutions, learning
 
+app.include_router(admin_router)
 app.include_router(profiles_router)
 app.include_router(workspace_router)
 # The resource routers use paths such as /me, /courses and /classes that also

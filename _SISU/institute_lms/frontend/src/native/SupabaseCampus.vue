@@ -39,6 +39,7 @@ const meeting=ref({class_id:'',title:'',starts_at:'',ends_at:''})
 const newInstitution=ref({title:'',code:''})
 const selectedInstitutions=ref({})
 const selectedCourse=ref(''),selectedModule=ref(''),modules=ref([]),lessons=ref([])
+const adminOverview=ref(null),adminOverviewError=ref('')
 const availableCourses=computed(()=>(data.value.courses||[]).filter(r=>r.institution_id===institution.value))
 const availableTeachers=computed(()=>(data.value.teachers||[]).filter(r=>r.institution_id===institution.value))
 const institutionClasses=computed(()=>(data.value.classes||[]).filter(r=>r.institution_id===institution.value))
@@ -52,6 +53,12 @@ function navigate(id){if(!canOpenWorkspacePage(profile.value,id))return;page.val
 function className(id){return data.value.classes?.find(c=>c.id===id)?.title||id}
 function studentName(id){return data.value.students?.find(s=>s.id===id)?.student_code||id}
 function date(value){return value?new Date(value).toLocaleString():'Not scheduled'}
+async function loadAdminOverview(){
+  if(!owner.value)return
+  adminOverviewError.value=''
+  try{adminOverview.value=await api('/api/admin/overview')}
+  catch(e){adminOverviewError.value=e.message;adminOverview.value=null}
+}
 async function load(){
   busy.value=true;error.value='';loaded.value=false
   try{
@@ -67,6 +74,7 @@ async function load(){
     if(authError)throw authError
     data.value=Object.fromEntries(paths.map(path=>[path,path in values?values[path]:[]]));loadErrors.value=errors;loaded.value=true
     if(!selectedCourse.value&&data.value.courses?.length)selectedCourse.value=data.value.courses[0].id
+    await loadAdminOverview()
   }catch(e){data.value={};error.value=e.message}finally{busy.value=false}
 }
 async function loadModules(){
@@ -125,6 +133,17 @@ onMounted(load)
           <p v-if="!profile.institution_id&&!owner" class="connection-note">Your account is active but has no institution assigned yet. An administrator must link your membership before classes become available.</p>
           <label v-if="owner&&['courses','classes'].includes(page)" class="institution-picker">Institution<select v-model="institution"><option value="" disabled>Choose institution</option><option v-for="r in data.institutions" :key="r.id" :value="r.id">{{r.title}}</option></select></label>
           <template v-if="page==='dashboard'">
+            <section v-if="owner&&page==='dashboard'" class="panel">
+              <h2>Super Admin Overview</h2>
+              <p v-if="adminOverviewError" class="connection-error">{{adminOverviewError}}</p>
+              <div v-if="adminOverview" class="stats-row">
+                <div class="stat-card"><strong>{{adminOverview.institutions}}</strong><span>Institutions</span></div>
+                <div class="stat-card"><strong>{{adminOverview.verified_students}}</strong><span>Verified Students</span></div>
+                <div class="stat-card"><strong>{{adminOverview.active_students}}</strong><span>Active Students</span></div>
+                <div class="stat-card"><strong>{{adminOverview.active_teachers}}</strong><span>Active Teachers</span></div>
+                <div class="stat-card"><strong>{{adminOverview.pending_applications}}</strong><span>Pending Applications</span></div>
+              </div>
+            </section>
             <section v-if="owner" class="panel"><h2>Platform administrator</h2><p>Review provider applications, create institutions, and assign verified students.</p><button class="button primary" @click="navigate('approvals')">Open People & approvals</button><p>{{data.applications?.length||0}} pending provider applications · {{data['profiles/unassigned']?.length||0}} students awaiting assignment</p></section>
             <section v-else-if="workspace==='institute-admin'" class="panel"><h2>Institute administrator</h2><p>Manage classrooms and your institution's teaching records.</p><button class="button primary" @click="navigate('management')">Open institute management</button><p>{{data.students?.length||0}} students · {{data.teachers?.length||0}} teachers</p></section>
             <section v-else-if="role==='teacher'" class="panel"><h2>Teaching workspace</h2><p>Manage your courses, lessons, schedule and attendance for your assigned institution.</p><button class="button primary" @click="navigate('courses')">Open courses</button></section>

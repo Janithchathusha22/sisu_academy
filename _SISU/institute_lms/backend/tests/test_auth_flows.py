@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 from supabase_auth.errors import AuthApiError
 
 from app import main
+from app.services.repository import get_repository
 from app import profiles as profile_routes
 from app.dependencies import auth as auth_dependency
 from app.main import app
@@ -250,6 +251,44 @@ def test_verified_super_admin_routes_from_active_platform_grant(client):
     assert body["role"] == "super_admin"
     assert body["institution_id"] is None
     assert test_client.get("/api/applications", headers={"Authorization": "Bearer valid-token"}).status_code == 200
+
+
+def test_super_admin_overview_returns_live_repository_counts(client, monkeypatch):
+    test_client, supabase = client
+    supabase.rows["platform_roles"] = [{"user_id": UID, "role": "super_admin", "active": True}]
+    counts = {
+        ("institutions", None): 3,
+        ("profiles", (("profile_kind", "student"), ("status", "verified"))): 12,
+        ("institution_memberships", (("role", "student"), ("status", "active"))): 8,
+        ("institution_memberships", (("role", "teacher"), ("status", "active"))): 4,
+        ("account_applications", (("status", "pending"),)): 2,
+    }
+
+    class OverviewRepository:
+        def count(self, table, *, filters=None):
+            key = (table, tuple(sorted((filters or {}).items())) or None)
+            return counts[key]
+
+    monkeypatch.setitem(app.dependency_overrides, get_repository, lambda: OverviewRepository())
+    response = test_client.get("/api/admin/overview", headers={"Authorization": "Bearer valid-token"})
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "role": "super_admin",
+        "email": "student@example.test",
+        "full_name": "Test Student",
+        "institutions": 3,
+        "verified_students": 12,
+        "active_students": 8,
+        "active_teachers": 4,
+        "pending_applications": 2,
+    }
+
+
+def test_student_cannot_read_super_admin_overview(client):
+    test_client, _ = client
+    response = test_client.get("/api/admin/overview", headers={"Authorization": "Bearer valid-token"})
+    assert response.status_code == 403
 
 
 def test_inactive_platform_grant_does_not_route_to_admin(client):
