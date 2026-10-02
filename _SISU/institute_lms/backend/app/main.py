@@ -106,7 +106,10 @@ def health():
 
 @app.get("/api/me")
 def me(user: Principal = Depends(current_user)):
-    rows = user_client(user.token).table("profiles").select("*").eq("id", user.id).limit(1).execute().data
+    rows = user_client(user.token).table("profiles").select(
+        "id,email,username,full_name,profile_kind,status,language,country,bio,tagline,"
+        "curriculum,languages,grades,qualifications,socials,avatar_path,cover_path,created_at,updated_at"
+    ).eq("id", user.id).limit(1).execute().data
     if not rows:
         raise HTTPException(403, "Profile not provisioned")
     return rows[0]

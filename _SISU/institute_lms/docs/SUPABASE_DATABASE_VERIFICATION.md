@@ -6,7 +6,7 @@ Date: 2026-10-01
 
 - Repository migration contains the 19 core application tables, foreign keys,
   indexes, and RLS definitions.
-- The additive auth migration creates the profile provisioning trigger,
+- The additive `202610010001_auth_and_rls.sql` migration creates the profile provisioning trigger,
   provider applications, opaque application sessions, restricted grants, and
   an own-application read policy.
 - The verification program opens a read-only transaction and does not contain

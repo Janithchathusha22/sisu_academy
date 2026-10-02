@@ -8,6 +8,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from ..config import Settings
 from ..database import user_client
+from ..identity_context import load_identity
 
 
 bearer = HTTPBearer(auto_error=False)
@@ -68,8 +69,8 @@ def get_current_user(
         if auth_user is None:
             raise ValueError("Supabase returned no user")
         user_id = str(auth_user.id)
-        profile_rows = client.table("profiles").select("*").eq("id", user_id).limit(1).execute().data or []
-        if not profile_rows:
+        profile = load_identity(client, user_id)
+        if not profile:
             raise HTTPException(status.HTTP_403_FORBIDDEN, "Profile not provisioned")
         role_rows = (
             client.table("platform_roles")
@@ -108,7 +109,7 @@ def get_current_user(
         id=user_id,
         email=getattr(auth_user, "email", None),
         token=token,
-        profile=_first(profile_rows),
+        profile=profile,
         memberships=memberships,
         platform_roles=frozenset(str(row["role"]) for row in role_rows),
     )

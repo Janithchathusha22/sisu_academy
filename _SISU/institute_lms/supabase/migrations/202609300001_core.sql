@@ -763,6 +763,7 @@ create table public.invoices (
   unique (provider_payment_id),
   unique (gateway_request_key),
   unique (enrollment_id, billing_month),
+  unique (id, institution_id),
   unique (legacy_source_site_id, legacy_frappe_name)
 );
 
