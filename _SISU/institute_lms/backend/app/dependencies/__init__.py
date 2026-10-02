@@ -7,6 +7,7 @@ from fastapi import Depends, Header, HTTPException, Request
 
 from ..config import get_settings
 from ..database import user_client
+from ..identity_context import load_identity
 from ..sessions import digest, load_session, refresh_and_validate
 from .auth import Membership, Principal as BearerPrincipal, get_current_user
 
@@ -32,14 +33,12 @@ def current_user(request: Request, x_csrf_token: str | None = Header(default=Non
 		if not x_csrf_token or not secrets.compare_digest(digest(x_csrf_token), session.csrf_hash):
 			raise HTTPException(403, "Invalid CSRF token")
 	auth_user, token = refresh_and_validate(session)
-	client = user_client(token)
-	rows = client.table("profiles").select("role,institution_id,account_status").eq("id", str(auth_user.id)).limit(1).execute().data
-	if not rows:
+	profile = load_identity(user_client(token), str(auth_user.id))
+	if not profile:
 		raise HTTPException(403, "Profile not provisioned")
-	row = rows[0]
 	return Principal(
-		str(auth_user.id), auth_user.email, row.get("role"), row.get("institution_id"),
-		token, session.raw_id, row.get("account_status", "active"),
+		str(auth_user.id), auth_user.email, profile.get("role"), profile.get("institution_id"),
+		token, session.raw_id, profile.get("account_status", "pending"),
 	)
 
 

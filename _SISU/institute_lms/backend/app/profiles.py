@@ -27,7 +27,7 @@ def create_institution(data: InstitutionInput, user: Principal=Depends(require_r
 
 @router.put('/me')
 def update_me(data: ProfileName, user: Principal=Depends(current_user)):
-    return user_client(user.token).table('profiles').update(data.model_dump()).eq('id',user.id).execute().data[0]
+    return user_client(user.token).table('profiles').update(data.model_dump()).eq('id',user.id).select('id,full_name').execute().data[0]
 
 @router.get('/applications')
 def applications(user: Principal=Depends(require_roles('super_admin'))):
@@ -52,4 +52,8 @@ def institutions(user: Principal=Depends(require_roles('super_admin','institute_
 
 @router.get('/profiles/unassigned')
 def unassigned(user: Principal=Depends(require_roles('super_admin'))):
-    return user_client(user.token).table('profiles').select('id,full_name,email').eq('role','student').is_('institution_id','null').limit(100).execute().data
+    client = user_client(user.token)
+    profiles = client.table('profiles').select('id,full_name,email').eq('profile_kind','student').eq('status','verified').limit(100).execute().data
+    assigned = client.table('institution_memberships').select('user_id').eq('role','student').in_('status',['pending','active']).execute().data
+    assigned_ids = {row['user_id'] for row in assigned}
+    return [profile for profile in profiles if profile['id'] not in assigned_ids]

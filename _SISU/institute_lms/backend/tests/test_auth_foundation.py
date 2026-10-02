@@ -7,6 +7,25 @@ from fastapi.testclient import TestClient
 from app.config import get_settings
 from app.main import app
 from app.sessions import decrypt_tokens, digest, encrypt_tokens
+from app.identity_context import load_identity
+
+
+class IdentityClient:
+    def __init__(self, rows):
+        self.rows = rows
+        self.name = ""
+
+    def table(self, name):
+        self.name = name
+        return self
+
+    def select(self, *args): return self
+    def eq(self, *args): return self
+    def limit(self, *args): return self
+
+    def execute(self):
+        from types import SimpleNamespace
+        return SimpleNamespace(data=self.rows.get(self.name, []))
 
 
 def test_session_tokens_are_encrypted_and_round_trip():
@@ -40,3 +59,21 @@ def test_mutation_rejects_missing_cookie():
         "title": "Course", "description": "", "institution_id": "00000000-0000-0000-0000-000000000000"
     })
     assert response.status_code == 401
+
+
+def test_student_identity_uses_verified_profile_without_membership():
+    identity = load_identity(IdentityClient({
+        "profiles": [{"id": "student", "profile_kind": "student", "status": "verified"}],
+        "platform_roles": [], "institution_memberships": [],
+    }), "student")
+    assert identity["role"] == "student"
+    assert identity["account_status"] == "active"
+
+
+def test_pending_teacher_keeps_kind_but_cannot_be_active():
+    identity = load_identity(IdentityClient({
+        "profiles": [{"id": "teacher", "profile_kind": "teacher", "status": "pending"}],
+        "platform_roles": [], "institution_memberships": [],
+    }), "teacher")
+    assert identity["role"] == "teacher"
+    assert identity["account_status"] == "pending"

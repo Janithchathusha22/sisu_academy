@@ -14,6 +14,7 @@ from .auth_transport import auth_request
 from .config import get_settings
 from .database import user_client, service_client
 from .dependencies import Principal, current_user
+from .identity_context import load_identity
 from .sessions import create_session, revoke_session, encrypt_tokens, decrypt_tokens, digest, load_session
 
 router = APIRouter(prefix='/api/auth', tags=['authentication'])
@@ -62,10 +63,10 @@ def require_configuration():
 
 
 def _profile(token, user_id):
-    rows = user_client(token).table('profiles').select('id,email,full_name,role,institution_id,account_status').eq('id', user_id).limit(1).execute().data
-    if not rows:
+    profile = load_identity(user_client(token), user_id)
+    if not profile:
         raise HTTPException(403, 'Profile provisioning is incomplete. Contact the site administrator.')
-    return rows[0]
+    return profile
 
 
 def _set_cookie(response, raw_id, csrf):

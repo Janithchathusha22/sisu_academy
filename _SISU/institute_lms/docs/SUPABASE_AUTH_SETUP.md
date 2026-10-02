@@ -10,15 +10,16 @@ use the user's JWT, so Row Level Security remains effective.
 
 1. Rotate any database password or service key that was previously copied into
    a repository file. Do not reuse it.
-2. Apply `supabase/migrations/202609300001_core.sql` if it is not already
-   present, then apply `supabase/migrations/202610010001_auth_sessions.sql`.
+2. Apply the migrations in filename order, ending with
+   `supabase/migrations/202610010001_auth_and_rls.sql`.
    Inspect first; never reset the existing project.
 3. Copy `backend/.env.example` to `backend/.env` and set the project URL,
    publishable key, rotated service-role key, database URL, frontend URL, and a
    random `SESSION_SECRET` of at least 32 characters.
-4. Copy `frontend/.env.example` to `frontend/.env.local` and set only the
-   project URL, publishable key, and FastAPI URL. Never put the service-role key
-   or database password in a `VITE_` variable.
+4. The frontend uses the same-origin `/api` proxy and needs no Supabase key.
+   Set `VITE_API_BASE_URL` only when the API is intentionally hosted at the
+   same browser origin. Never put a service-role key or database password in a
+   `VITE_` variable.
 5. In Supabase Auth URL configuration, allow the exact frontend origin and its
    `/` callback. Enable Google only after configuring its provider credentials.
 
