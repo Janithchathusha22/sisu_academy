@@ -3,6 +3,7 @@ import {computed,onMounted,ref} from 'vue'
 import Icon from '../Icon.vue'
 import Art from '../Art.vue'
 import {api,currentSession,logoutSession} from '../lib/api'
+import {canOpenWorkspacePage,workspaceKind} from '../lib/workspace'
 
 const props=defineProps({session:{type:Object,required:true}})
 const emit=defineEmits(['logout','session'])
@@ -11,6 +12,7 @@ const data=ref({}),profile=ref({...props.session.profile}),fullName=ref(profile.
 const manager=computed(()=>['teacher','institute_admin','super_admin'].includes(profile.value.role))
 const admin=computed(()=>['institute_admin','super_admin'].includes(profile.value.role))
 const owner=computed(()=>profile.value.role==='super_admin')
+const workspace=computed(()=>workspaceKind(profile.value))
 const active=computed(()=>profile.value.account_status==='active')
 const roleLabel=computed(()=>({student:'Student',teacher:'Teacher',institute_admin:'Institute administrator',super_admin:'Platform administrator'}[profile.value.role]||'Applicant'))
 const nav=computed(()=>[
@@ -18,7 +20,9 @@ const nav=computed(()=>[
   ['schedule','CalendarDays','Schedule'],['attendance','ClipboardCheck','Attendance'],['assignments','NotebookPen','Assignments'],
   ['materials','BookOpen','Materials'],['exams','GraduationCap','Exams'],['results','Award','Results'],
   ['payments','CreditCard','Payments'],['notifications','Bell','Updates'],
-  ...(owner.value?[['approvals','Users','People & approvals']]:[]),['profile','IdCard','My profile']])
+  ...(owner.value?[['approvals','Users','People & approvals']]:[]),
+  ...(workspace.value==='institute-admin'?[['management','Users','Institute management']]:[]),
+  ['profile','IdCard','My profile']])
 const title=computed(()=>nav.value.find(n=>n[0]===page.value)?.[2]||'Workspace')
 const rows=computed(()=>data.value[page.value]||[])
 const stats=computed(()=>[['Classrooms',data.value.classes?.length],['Courses',data.value.courses?.length],['Attendance records',data.value.attendance?.length]])
@@ -39,7 +43,7 @@ const registerStudents=computed(()=>{
   const allowed=new Set((data.value.enrollments||[]).filter(e=>e.class_id===selectedSession?.class_id&&e.status==='active').map(e=>e.student_membership_id))
   return (data.value.students||[]).filter(s=>allowed.has(s.id))
 })
-function navigate(id){page.value=id;mobile.value=false;message.value=''}
+function navigate(id){if(!canOpenWorkspacePage(profile.value,id))return;page.value=id;mobile.value=false;message.value=''}
 function className(id){return data.value.classes?.find(c=>c.id===id)?.title||id}
 function studentName(id){return data.value.students?.find(s=>s.id===id)?.student_code||id}
 function date(value){return value?new Date(value).toLocaleString():'Not scheduled'}
@@ -47,6 +51,8 @@ async function load(){
   busy.value=true;error.value='';loaded.value=false
   try{
     const fresh=await currentSession();profile.value=fresh.profile;emit('session',fresh)
+    if(!canOpenWorkspacePage(profile.value,page.value))page.value='dashboard'
+    if(workspace.value==='institute-admin')institution.value=profile.value.institution_id
     if(!active.value){data.value={};loaded.value=true;return}
     const paths=['courses','classes','schedule','attendance','enrollments','assignments','materials','exams','results','payments','notifications']
     if(manager.value)paths.push('students','teachers')
@@ -93,12 +99,18 @@ onMounted(load)
           <p v-if="!profile.institution_id&&!owner" class="connection-note">Your account is active but has no institution assigned yet. An administrator must link your membership before classes become available.</p>
           <label v-if="owner&&['courses','classes'].includes(page)" class="institution-picker">Institution<select v-model="institution"><option value="" disabled>Choose institution</option><option v-for="r in data.institutions" :key="r.id" :value="r.id">{{r.title}}</option></select></label>
           <template v-if="page==='dashboard'">
+            <section v-if="owner" class="panel"><h2>Platform administrator</h2><p>Review provider applications, create institutions, and assign verified students.</p><button class="button primary" @click="navigate('approvals')">Open People & approvals</button><p>{{data.applications?.length||0}} pending provider applications · {{data['profiles/unassigned']?.length||0}} students awaiting assignment</p></section>
+            <section v-else-if="workspace==='institute-admin'" class="panel"><h2>Institute administrator</h2><p>Manage classrooms and your institution's teaching records.</p><button class="button primary" @click="navigate('management')">Open institute management</button><p>{{data.students?.length||0}} students · {{data.teachers?.length||0}} teachers</p></section>
             <section class="hero"><div class="hero-copy"><span class="hero-label">YOUR SPACE TO GROW</span><h2>A little progress.<br>A world of possibility.</h2><p>Your learning and teaching, together in one place.</p><button class="button dark" @click="navigate('classes')">Your classrooms <Icon name="ArrowRight" :size="17"/></button></div><Art/></section>
             <div class="stats-row"><div v-for="stat in stats" :key="stat[0]" class="stat-card"><span class="stat-icon violet"><Icon name="BookOpen"/></span><div><strong>{{loaded?stat[1]:'—'}}</strong><span>{{stat[0]}}</span></div></div></div>
             <div class="connected-grid"><section class="panel"><h2>Coming up</h2><article v-for="r in (data.schedule||[]).filter(s=>new Date(s.ends_at)>new Date()).sort((a,b)=>a.starts_at.localeCompare(b.starts_at)).slice(0,5)" :key="r.id" class="data-row"><h3>{{r.title}}</h3><p>{{className(r.class_id)}} · {{date(r.starts_at)}}</p></article><p v-if="loaded&&!(data.schedule||[]).some(s=>new Date(s.ends_at)>new Date())">No upcoming sessions.</p></section><section class="panel"><h2>Your workspace</h2><p>Use the sidebar for your course, schedule and learning records.</p><p>Lists show up to 200 recent records. Counts describe the loaded records, not institution-wide totals.</p><p>Legacy marketplace, wallet, AI papers and community screens are retained in the separate preview; those integrations are not live in Supabase yet.</p></section></div>
           </template>
+          <template v-else-if="page==='management'&&workspace==='institute-admin'">
+            <section class="panel"><h2>Your institution</h2><article v-for="r in data.institutions||[]" :key="r.id" class="data-row"><h3>{{r.title}}</h3><p>{{r.code}}</p></article><p v-if="loaded&&!data.institutions?.length">No active institution is available.</p></section>
+            <div class="connected-grid"><section class="panel"><h2>Students</h2><article v-for="r in data.students||[]" :key="r.id" class="data-row">{{r.display_name||r.student_code||r.id}}</article></section><section class="panel"><h2>Teachers</h2><article v-for="r in data.teachers||[]" :key="r.id" class="data-row">{{r.display_name||r.teacher_code||r.id}}</article></section></div>
+          </template>
           <template v-else-if="page==='approvals'&&owner">
-            <section class="panel"><h2>Institutions</h2><form @submit.prevent="save('institutions',newInstitution)"><label>Name<input v-model="newInstitution.title" required maxlength="120"></label><label>Unique code<input v-model="newInstitution.code" required pattern="[a-zA-Z0-9_-]+" minlength="2" maxlength="40"></label><button class="button primary" :disabled="busy">Create institution</button></form></section>
+            <section class="panel"><h2>Institutions</h2><form @submit.prevent="save('institutions',newInstitution)"><label>Name<input v-model="newInstitution.title" required maxlength="120"></label><label>Unique code<input v-model="newInstitution.code" required pattern="[A-Z][A-Z0-9]{1,11}" minlength="2" maxlength="12" placeholder="SISU01"></label><button class="button primary" :disabled="busy">Create institution</button></form></section>
             <section class="panel"><h2>Provider applications</h2><article v-for="r in data.applications" :key="r.id" class="data-row"><h3>{{r.details.full_name||r.user_id}} · {{r.account_type}}</h3><p>{{r.details.organization||r.details.subject}}</p><label>Institution<select v-model="selectedInstitutions[r.id]"><option v-for="i in data.institutions" :key="i.id" :value="i.id">{{i.title}}</option></select></label><div class="actions"><button class="button primary" :disabled="busy||!selectedInstitutions[r.id]" @click="review(r,'approved')">Approve</button><button class="button subtle" :disabled="busy" @click="review(r,'rejected')">Reject</button></div></article><p v-if="loaded&&!data.applications?.length">No pending applications.</p></section>
             <section class="panel"><h2>Students awaiting institution assignment</h2><article v-for="r in data['profiles/unassigned']" :key="r.id" class="data-row"><h3>{{r.full_name||r.email}}</h3><label>Institution<select v-model="selectedInstitutions[r.id]"><option v-for="i in data.institutions" :key="i.id" :value="i.id">{{i.title}}</option></select></label><button class="button primary" :disabled="busy||!selectedInstitutions[r.id]" @click="save('profiles/'+r.id+'/institution',{institution_id:selectedInstitutions[r.id]})">Assign student</button></article><p v-if="loaded&&!data['profiles/unassigned']?.length">No unassigned students.</p></section>
           </template>

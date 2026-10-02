@@ -19,7 +19,7 @@ class Assignment(BaseModel):
 
 class InstitutionInput(BaseModel):
     title: str=Field(min_length=1,max_length=120)
-    code: str=Field(min_length=2,max_length=40,pattern=r'^[a-zA-Z0-9_-]+$')
+    code: str=Field(min_length=2,max_length=12,pattern=r'^[A-Z][A-Z0-9]{1,11}$')
 
 @router.post('/institutions', status_code=201)
 def create_institution(data: InstitutionInput, user: Principal=Depends(require_roles('super_admin'))):

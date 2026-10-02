@@ -4,7 +4,8 @@ import {signInWithGoogle,signUp} from '../lib/supabase'
 import {currentSession} from '../lib/api'
 
 const emit=defineEmits(['back','authenticated'])
-const type=ref('student'),busy=ref(false),error=ref(''),done=ref(false)
+const props=defineProps({initialType:{type:String,default:'student'}})
+const type=ref(props.initialType==='teacher'?'teacher':'student'),busy=ref(false),error=ref(''),done=ref(false),confirmationRequired=ref(true)
 const form=ref({full_name:'',email:'',password:'',organization:'',subject:'',country:'',timezone:Intl.DateTimeFormat().resolvedOptions().timeZone})
 
 async function submit(){
@@ -12,8 +13,9 @@ async function submit(){
   try{
     const data=await signUp({email:form.value.email,password:form.value.password,fullName:form.value.full_name,
       accountType:type.value,details:{organization:form.value.organization,subject:form.value.subject,country:form.value.country,timezone:form.value.timezone}})
-    if(data.session)emit('authenticated',await currentSession())
-    else done.value=true
+    // Providers remain pending even if this project's email policy returns a session.
+    if(type.value==='student'&&data.session)emit('authenticated',await currentSession())
+    else{confirmationRequired.value=!data.session;done.value=true}
   }catch(e){error.value=e.message}finally{busy.value=false}
 }
 async function google(){try{await signInWithGoogle()}catch(e){error.value=e.message}}
@@ -23,7 +25,7 @@ async function google(){try{await signInWithGoogle()}catch(e){error.value=e.mess
   <main class="application-shell"><header><strong>sisu ✦</strong><button @click="emit('back')">← Back to sign in</button></header>
     <div class="application-layout"><aside><span class="eyebrow">A PLACE FOR YOUR NEXT CHAPTER</span><h1>Good people.<br>Bright futures.<br><em>One little space.</em></h1><p>Supabase-secured learning, teaching and community.</p><div class="application-art">✦ <span>❀</span> ✧</div></aside>
       <section class="panel application-form"><p v-if="error" class="error" role="alert">{{error}}</p>
-        <template v-if="done"><h2>Check your email</h2><p>Use the confirmation link sent by Supabase, then return here and sign in. Teacher and institute applications remain pending until an administrator approves them.</p><button class="button primary" @click="emit('back')">Back to sign in</button></template>
+        <template v-if="done"><h2>{{confirmationRequired?'Check your email':'Application submitted'}}</h2><p>{{confirmationRequired?'Use the confirmation link sent by Supabase, then return here and sign in. ':'Your account has been created. '}}Teacher and institute applications remain pending until an administrator approves them.</p><button class="button primary" @click="emit('back')">Back to sign in</button></template>
         <form v-else @submit.prevent="submit"><span class="eyebrow">CREATE A SECURE ACCOUNT</span><h2>Start your Sisu space.</h2>
           <div class="account-types"><button v-for="row in [{id:'student',label:'Student'},{id:'teacher',label:'Teacher'},{id:'institute',label:'Institute'}]" :key="row.id" type="button" :class="{active:type===row.id}" @click="type=row.id">{{row.label}}</button></div>
           <p v-if="type!=='student'" class="application-policy">Provider accounts are created as pending. Choosing a role here never grants privileged access.</p>

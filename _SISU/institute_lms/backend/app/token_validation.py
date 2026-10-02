@@ -4,7 +4,13 @@ from functools import lru_cache
 
 import jwt
 from jwt import PyJWKClient
-from jwt.exceptions import PyJWKClientConnectionError, PyJWTError
+from jwt.exceptions import (
+    ExpiredSignatureError,
+    InvalidAudienceError,
+    InvalidIssuerError,
+    PyJWKClientConnectionError,
+    PyJWTError,
+)
 from fastapi import HTTPException
 
 from .config import Settings
@@ -32,5 +38,11 @@ def validate_access_token(token: str, settings: Settings) -> dict:
         return claims
     except PyJWKClientConnectionError as exc:
         raise HTTPException(503, "Supabase token verification service is unavailable") from exc
+    except ExpiredSignatureError as exc:
+        raise HTTPException(401, "Sign-in session expired. Please sign in again") from exc
+    except InvalidIssuerError as exc:
+        raise HTTPException(401, "Sign-in session belongs to a different Supabase project") from exc
+    except InvalidAudienceError as exc:
+        raise HTTPException(401, "Sign-in session has an invalid audience") from exc
     except (PyJWTError, ValueError) as exc:
-        raise HTTPException(401, "Invalid or expired token") from exc
+        raise HTTPException(401, "Sign-in session signature or claims are invalid") from exc

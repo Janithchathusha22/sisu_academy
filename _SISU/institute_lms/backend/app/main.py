@@ -7,6 +7,7 @@ from fastapi.responses import JSONResponse
 from postgrest.exceptions import APIError
 from pydantic import BaseModel, Field
 from uuid import UUID
+from urllib.parse import urlparse
 
 from .config import get_settings
 from .database import user_client
@@ -99,6 +100,7 @@ class AttendanceUpdate(BaseModel):
 def health():
     configured = bool(settings.supabase_url and settings.supabase_publishable_key)
     return {"status": "running", "backend": "FastAPI", "database": "Supabase PostgreSQL", "configured": configured,
+            "supabase_host": urlparse(settings.supabase_url).hostname,
             "connectivity_verified": False}
 
 

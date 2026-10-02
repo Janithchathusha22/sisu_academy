@@ -95,18 +95,16 @@ def get_current_user(
     try:
         auth_response = client.auth.get_user(token)
         auth_user = getattr(auth_response, "user", None)
-        if auth_user is None:
-            raise ValueError("Supabase returned no user")
     except (AuthRetryableError, httpx.HTTPError) as exc:
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "Supabase authentication service is unavailable") from exc
     except AuthApiError as exc:
         if exc.status >= 500:
             raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "Supabase authentication service is unavailable") from exc
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid or expired token") from exc
-    except ValueError as exc:
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid or expired token") from exc
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Supabase rejected the sign-in session") from exc
+    if auth_user is None:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Supabase session has no user")
     if str(auth_user.id) != str(claims["sub"]):
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid or expired token")
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Supabase session user does not match the token")
 
     # Authentication succeeded. Keep profile/RLS/provisioning failures outside
     # the token-validation exception boundary so they are never mislabeled 401.
@@ -145,11 +143,31 @@ def get_current_user(
         )
         for row in membership_rows
     )
+    # The sign-in form and Auth user metadata are never authorization sources.
+    # Pick a stable workspace when a user belongs to more than one institution.
+    active_roles = frozenset(str(row["role"]) for row in role_rows) if profile["account_status"] == "active" else frozenset()
+    preferred = next(
+        (membership for role in ("institute_admin", "teacher", "student")
+         for membership in sorted(memberships, key=lambda item: item.institution_id)
+         if membership.role == role),
+        None,
+    ) if profile["account_status"] == "active" else None
+    profile = {
+        **profile,
+        "role": (
+            "super_admin" if "super_admin" in active_roles else
+            preferred.role if preferred else
+            "student" if profile["account_status"] == "active" and profile["profile_kind"] == "student" else None
+        ),
+        "institution_id": preferred.institution_id if preferred else None,
+        "membership_id": preferred.id if preferred else None,
+        "member_code": preferred.member_code if preferred else None,
+    }
     return Principal(
         id=user_id,
         email=getattr(auth_user, "email", None),
         token=token,
         profile=profile,
         memberships=memberships,
-        platform_roles=frozenset(str(row["role"]) for row in role_rows) if profile["account_status"] == "active" else frozenset(),
+        platform_roles=active_roles,
     )

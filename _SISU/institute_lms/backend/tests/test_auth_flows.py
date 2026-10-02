@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 from supabase_auth.errors import AuthApiError
 
 from app import main
+from app import profiles as profile_routes
 from app.dependencies import auth as auth_dependency
 from app.main import app
 
@@ -19,11 +20,11 @@ class Query:
     def __init__(self, client, table):
         self.client = client
         self.name = table
+        self.filters = []
 
     def select(self, *args): return self
     def eq(self, column, value):
-        if column == "id" and self.name == "profiles":
-            self.profile_id = value
+        self.filters.append((column, value))
         return self
     def limit(self, *args): return self
 
@@ -31,8 +32,7 @@ class Query:
         if self.client.database_error:
             raise RuntimeError("database unavailable")
         rows = self.client.rows.get(self.name, [])
-        if self.name == "profiles" and hasattr(self, "profile_id"):
-            rows = [row for row in rows if row["id"] == self.profile_id]
+        rows = [row for row in rows if all(row.get(column) == value for column, value in self.filters)]
         return SimpleNamespace(data=rows)
 
 
@@ -63,7 +63,7 @@ class Auth:
 
     def get_user(self, token):
         if not self.valid or token != "valid-token":
-            raise ValueError("invalid token")
+            raise AuthApiError("invalid token", 401, None)
         return SimpleNamespace(user=SimpleNamespace(id=UID, email="student@example.test"))
 
 
@@ -99,6 +99,7 @@ def client(monkeypatch):
     monkeypatch.setattr(auth_dependency, "user_client", lambda token, settings=None: supabase)
     monkeypatch.setattr(auth_dependency, "validate_access_token", lambda token, settings: {"sub": UID})
     monkeypatch.setattr(main, "user_client", lambda token: supabase)
+    monkeypatch.setattr(profile_routes, "user_client", lambda token: supabase)
     with TestClient(app, base_url=ORIGIN) as test_client:
         yield test_client, supabase
 
@@ -123,7 +124,7 @@ def test_invalid_or_expired_token_is_rejected(client):
     test_client, _ = client
     response = test_client.get("/api/me", headers={"Authorization": "Bearer invalid"})
     assert response.status_code == 401
-    assert response.json()["detail"] == "Invalid or expired token"
+    assert response.json()["detail"] == "Supabase rejected the sign-in session"
 
 
 def test_supabase_auth_outage_is_503(client):
@@ -226,6 +227,67 @@ def test_student_cannot_call_super_admin_route(client):
     test_client, _ = client
     response = test_client.get("/api/applications", headers={"Authorization": "Bearer valid-token"})
     assert response.status_code == 403
+
+
+def test_verified_super_admin_routes_from_active_platform_grant(client):
+    test_client, supabase = client
+    supabase.rows["platform_roles"] = [{"user_id": UID, "role": "super_admin", "active": True}]
+    response = test_client.get("/api/me", headers={"Authorization": "Bearer valid-token"})
+    assert response.status_code == 200
+    assert response.json()["role"] == "super_admin"
+    assert response.json()["institution_id"] is None
+    assert test_client.get("/api/applications", headers={"Authorization": "Bearer valid-token"}).status_code == 200
+
+
+def test_inactive_platform_grant_does_not_route_to_admin(client):
+    test_client, supabase = client
+    supabase.rows["platform_roles"] = [{"user_id": UID, "role": "super_admin", "active": False}]
+    response = test_client.get("/api/me", headers={"Authorization": "Bearer valid-token"})
+    assert response.json()["role"] == "student"
+
+
+def test_institute_admin_routes_from_active_membership(client):
+    test_client, supabase = client
+    institution = "30000000-0000-0000-0000-000000000003"
+    supabase.rows["profiles"][0]["profile_kind"] = "institute"
+    supabase.rows["institution_memberships"] = [{
+        "id": "40000000-0000-0000-0000-000000000004",
+        "user_id": UID, "institution_id": institution, "role": "institute_admin",
+        "status": "active", "member_code": "ADM-1",
+    }]
+    response = test_client.get("/api/me", headers={"Authorization": "Bearer valid-token"})
+    assert response.status_code == 200
+    assert response.json()["role"] == "institute_admin"
+    assert response.json()["institution_id"] == institution
+    assert test_client.get("/api/institutions", headers={"Authorization": "Bearer valid-token"}).status_code == 200
+    assert test_client.get("/api/applications", headers={"Authorization": "Bearer valid-token"}).status_code == 403
+    other = "50000000-0000-0000-0000-000000000005"
+    denied = test_client.post("/api/classes", headers={"Authorization": "Bearer valid-token"}, json={
+        "title": "Wrong campus", "subject": "Math", "institution_id": other,
+    })
+    assert denied.status_code == 403
+
+
+def test_inactive_or_other_user_membership_cannot_grant_institute_admin(client):
+    test_client, supabase = client
+    supabase.rows["institution_memberships"] = [
+        {"id": "1", "user_id": UID, "institution_id": "2", "role": "institute_admin", "status": "pending"},
+        {"id": "3", "user_id": "other", "institution_id": "4", "role": "institute_admin", "status": "active"},
+    ]
+    response = test_client.get("/api/me", headers={"Authorization": "Bearer valid-token"})
+    assert response.json()["role"] == "student"
+
+
+def test_admin_membership_wins_over_student_membership_without_crossing_tenants(client):
+    test_client, supabase = client
+    supabase.rows["institution_memberships"] = [
+        {"id": "1", "user_id": UID, "institution_id": "school-a", "role": "student", "status": "active"},
+        {"id": "2", "user_id": UID, "institution_id": "school-b", "role": "institute_admin", "status": "active"},
+    ]
+    response = test_client.get("/api/me", headers={"Authorization": "Bearer valid-token"})
+    assert response.status_code == 200
+    assert response.json()["role"] == "institute_admin"
+    assert response.json()["institution_id"] == "school-b"
 
 
 def test_cors_preflight_allows_authorization_header(client):
