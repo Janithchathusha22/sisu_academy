@@ -63,6 +63,7 @@ as $$
     from public.institution_memberships m
     where m.id = target_membership_id
       and m.user_id = (select auth.uid())
+      and m.status = 'active'
   )
 $$;
 
@@ -449,14 +450,18 @@ grant select (id, institution_id, exam_id, position, kind, prompt, options, mark
   created_at, updated_at)
 on public.exam_questions to authenticated;
 grant update (read_at) on public.notifications to authenticated;
-
-create policy profiles_verified_provider_select
-on public.profiles for select to anon, authenticated
-using (status = 'verified' and profile_kind in ('teacher', 'institute'));
+grant insert on public.institutions, public.courses, public.classes,
+  public.class_sessions, public.enrollments, public.attendance
+to authenticated;
+grant update (title, description, published, active) on public.courses to authenticated;
+grant update (status, note) on public.attendance to authenticated;
 
 create policy profiles_own_select
-on public.profiles for select to authenticated
-using (id = (select auth.uid()));
+on public.profiles for select to anon, authenticated
+using (
+  id = (select auth.uid())
+  or (status = 'verified' and profile_kind in ('teacher', 'institute'))
+);
 
 create policy profiles_own_update
 on public.profiles for update to authenticated
@@ -478,6 +483,24 @@ using (private.can_view_membership(id));
 create policy courses_scoped_select
 on public.courses for select to authenticated
 using (private.can_view_course(id));
+
+create policy courses_authorized_insert
+on public.courses for insert to authenticated
+with check (
+  created_by = (select auth.uid())
+  and (
+    private.is_institute_admin(institution_id)
+    or private.has_membership(institution_id, array['teacher']::text[])
+  )
+);
+
+create policy courses_authorized_update
+on public.courses for update to authenticated
+using (private.can_manage_course(id))
+with check (
+  created_by = (select auth.uid())
+  or private.is_institute_admin(institution_id)
+);
 
 create policy course_modules_scoped_select
 on public.course_modules for select to authenticated
@@ -501,9 +524,29 @@ create policy classes_catalog_or_member_select
 on public.classes for select to authenticated
 using ((active and published) or private.can_view_class(id));
 
+create policy classes_admin_insert
+on public.classes for insert to authenticated
+with check (
+  private.is_institute_admin(institution_id)
+  and (
+    teacher_membership_id is null
+    or exists (
+      select 1 from public.institution_memberships teacher
+      where teacher.id = teacher_membership_id
+        and teacher.institution_id = classes.institution_id
+        and teacher.role = 'teacher'
+        and teacher.status = 'active'
+    )
+  )
+);
+
 create policy class_sessions_member_select
 on public.class_sessions for select to authenticated
 using (private.can_view_class(class_id));
+
+create policy class_sessions_manager_insert
+on public.class_sessions for insert to authenticated
+with check (private.can_manage_class(class_id));
 
 create policy materials_content_select
 on public.materials for select to authenticated
@@ -532,12 +575,37 @@ using (
   or private.can_teach_class(class_id)
 );
 
+create policy enrollments_admin_insert
+on public.enrollments for insert to authenticated
+with check (
+  private.is_institute_admin(institution_id)
+  and exists (
+    select 1 from public.institution_memberships student
+    where student.id = student_membership_id
+      and student.institution_id = enrollments.institution_id
+      and student.role = 'student'
+      and student.status = 'active'
+  )
+);
+
 create policy attendance_scoped_select
 on public.attendance for select to authenticated
 using (
   private.owns_membership(student_membership_id)
   or private.can_teach_class(class_id)
 );
+
+create policy attendance_teacher_insert
+on public.attendance for insert to authenticated
+with check (
+  private.can_teach_class(class_id)
+  and recorded_by = (select auth.uid())
+);
+
+create policy attendance_teacher_update
+on public.attendance for update to authenticated
+using (private.can_teach_class(class_id))
+with check (private.can_teach_class(class_id));
 
 create policy assignments_scoped_select
 on public.assignments for select to authenticated
@@ -649,7 +717,7 @@ create policy invoices_scoped_select
 on public.invoices for select to authenticated
 using (
   private.owns_membership(student_membership_id)
-  or private.can_teach_class(class_id)
+  or private.is_institute_admin(institution_id)
 );
 
 create policy payments_scoped_select
@@ -660,7 +728,7 @@ using (
     where i.id = payments.invoice_id
       and (
         private.owns_membership(i.student_membership_id)
-        or private.can_teach_class(i.class_id)
+        or private.is_institute_admin(i.institution_id)
       )
   )
 );
@@ -692,6 +760,10 @@ using (
   private.is_platform_admin()
   or (institution_id is not null and private.is_institute_admin(institution_id))
 );
+
+create policy institutions_platform_insert
+on public.institutions for insert to authenticated
+with check (private.is_platform_admin());
 
 create or replace view public.students
 with (security_invoker = true, security_barrier = true)

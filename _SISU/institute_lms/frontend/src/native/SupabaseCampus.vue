@@ -26,7 +26,7 @@ const institution=ref(profile.value.institution_id||'')
 const course=ref({title:'',description:''})
 const classroom=ref({title:'',subject:'',course_id:'',teacher_id:''})
 const enrollment=ref({class_id:'',student_id:''})
-const register=ref({class_id:'',student_id:'',occurred_at:'',status:'Present'})
+const register=ref({class_session_id:'',student_id:'',status:'present',note:''})
 const meeting=ref({class_id:'',title:'',starts_at:'',ends_at:''})
 const newInstitution=ref({title:'',code:''})
 const selectedInstitutions=ref({})
@@ -35,7 +35,8 @@ const availableTeachers=computed(()=>(data.value.teachers||[]).filter(r=>r.insti
 const institutionClasses=computed(()=>(data.value.classes||[]).filter(r=>r.institution_id===institution.value))
 const institutionStudents=computed(()=>(data.value.students||[]).filter(r=>r.institution_id===institution.value))
 const registerStudents=computed(()=>{
-  const allowed=new Set((data.value.enrollments||[]).filter(e=>e.class_id===register.value.class_id&&e.active).map(e=>e.student_id))
+  const selectedSession=(data.value.schedule||[]).find(s=>s.id===register.value.class_session_id)
+  const allowed=new Set((data.value.enrollments||[]).filter(e=>e.class_id===selectedSession?.class_id&&e.status==='active').map(e=>e.student_membership_id))
   return (data.value.students||[]).filter(s=>allowed.has(s.id))
 })
 function navigate(id){page.value=id;mobile.value=false;message.value=''}
@@ -63,7 +64,7 @@ async function save(path,body,method='POST'){
 }
 async function createCourse(){if(await save('courses',{...course.value,institution_id:institution.value}))course.value={title:'',description:''}}
 async function createClass(){if(await save('classes',{...classroom.value,institution_id:institution.value,course_id:classroom.value.course_id||null,teacher_id:classroom.value.teacher_id||null}))classroom.value={title:'',subject:'',course_id:'',teacher_id:''}}
-async function record(){await save('attendance',{...register.value,occurred_at:new Date(register.value.occurred_at).toISOString()})}
+async function record(){await save('attendance',register.value)}
 async function schedule(){await save('schedule',{...meeting.value,starts_at:new Date(meeting.value.starts_at).toISOString(),ends_at:new Date(meeting.value.ends_at).toISOString()})}
 async function review(row,decision){await save('applications/'+row.id+'/review',{decision,institution_id:selectedInstitutions.value[row.id]||null})}
 async function saveProfile(){if(await save('me',{full_name:fullName.value.trim()},'PUT'))fullName.value=profile.value.full_name}
@@ -107,22 +108,22 @@ onMounted(load)
                 <h3>{{r.title||r.body||(page==='attendance'?r.status:page==='payments'?r.currency+' '+r.amount:page==='results'?'Score: '+(r.score??'Not graded'):r.id)}}</h3>
                 <p v-if="r.class_id">{{className(r.class_id)}}</p><p v-if="r.description||r.instructions">{{r.description||r.instructions}}</p>
                 <p v-if="page==='schedule'">{{date(r.starts_at)}} – {{date(r.ends_at)}} · {{r.mode}}</p>
-                <p v-if="page==='attendance'">{{studentName(r.student_id)}} · {{date(r.occurred_at)}}</p>
+                <p v-if="page==='attendance'">{{studentName(r.student_membership_id)}} · {{date(r.recorded_at)}}</p>
                 <p v-if="page==='assignments'">Due: {{date(r.due_at)}}</p><p v-if="page==='exams'">Opens: {{date(r.opens_at)}} · Closes: {{date(r.closes_at)}}</p>
                 <p v-if="page==='payments'">{{r.status}} · {{date(r.created_at)}}</p><p v-if="page==='results'">{{r.feedback}}</p>
                 <p v-if="page==='materials'">{{r.download_policy}} · File delivery is not enabled in this workspace yet.</p>
                 <p v-if="page==='courses'">{{r.published?'Published':'Draft'}}</p>
                 <button v-if="page==='courses'&&(admin||(manager&&r.created_by===profile.id))" class="button subtle" :disabled="busy" @click="save('courses/'+r.id,{published:!r.published},'PUT')">{{r.published?'Unpublish':'Publish'}}</button>
-                <label v-if="page==='attendance'&&manager">Update status<select :value="r.status" :disabled="busy" @change="save('attendance/'+r.id,{status:$event.target.value},'PUT')"><option v-for="s in ['Present','Absent','Late','Excused']" :key="s">{{s}}</option></select></label>
+                <label v-if="page==='attendance'&&manager">Update status<select :value="r.status" :disabled="busy" @change="save('attendance/'+r.id,{status:$event.target.value},'PUT')"><option v-for="s in ['present','absent','excused']" :key="s" :value="s">{{s}}</option></select></label>
               </article>
             </section>
             <form v-if="page==='courses'&&manager" class="panel" @submit.prevent="createCourse"><h2>Create course</h2><label>Title<input v-model="course.title" required maxlength="120"></label><label>Description<textarea v-model="course.description" maxlength="2000"></textarea></label><button class="button primary" :disabled="busy||!institution">Save course</button></form>
             <div v-if="page==='classes'&&admin" class="connected-grid">
-              <form class="panel" @submit.prevent="createClass"><h2>Create classroom</h2><label>Title<input v-model="classroom.title" required maxlength="120"></label><label>Subject<input v-model="classroom.subject" maxlength="120"></label><label>Course<select v-model="classroom.course_id"><option value="">No course</option><option v-for="r in availableCourses" :key="r.id" :value="r.id">{{r.title}}</option></select></label><label>Teacher<select v-model="classroom.teacher_id"><option value="">Not assigned</option><option v-for="r in availableTeachers" :key="r.id" :value="r.id">{{r.teacher_code||r.id}}</option></select></label><button class="button primary" :disabled="busy||!institution">Save classroom</button></form>
+              <form class="panel" @submit.prevent="createClass"><h2>Create classroom</h2><label>Title<input v-model="classroom.title" required maxlength="120"></label><label>Subject<input v-model="classroom.subject" required maxlength="120"></label><label>Course<select v-model="classroom.course_id"><option value="">No course</option><option v-for="r in availableCourses" :key="r.id" :value="r.id">{{r.title}}</option></select></label><label>Teacher<select v-model="classroom.teacher_id"><option value="">Not assigned</option><option v-for="r in availableTeachers" :key="r.id" :value="r.id">{{r.teacher_code||r.id}}</option></select></label><button class="button primary" :disabled="busy||!institution">Save classroom</button></form>
               <form class="panel" @submit.prevent="save('enrollments',{...enrollment,institution_id:institution})"><h2>Enroll student</h2><label>Class<select v-model="enrollment.class_id" required><option v-for="r in institutionClasses" :key="r.id" :value="r.id">{{r.title}}</option></select></label><label>Student<select v-model="enrollment.student_id" required><option v-for="r in institutionStudents" :key="r.id" :value="r.id">{{r.student_code||r.id}}</option></select></label><button class="button primary" :disabled="busy||!institution">Enroll</button></form>
             </div>
             <form v-if="page==='schedule'&&admin" class="panel" @submit.prevent="schedule"><h2>Schedule class</h2><label>Class<select v-model="meeting.class_id" required><option v-for="r in data.classes" :key="r.id" :value="r.id">{{r.title}}</option></select></label><label>Title<input v-model="meeting.title" required maxlength="120"></label><label>Start (your local time)<input v-model="meeting.starts_at" type="datetime-local" required></label><label>End (your local time)<input v-model="meeting.ends_at" type="datetime-local" required></label><button class="button primary" :disabled="busy">Save session</button></form>
-            <form v-if="page==='attendance'&&manager" class="panel" @submit.prevent="record"><h2>Record attendance</h2><label>Class<select v-model="register.class_id" required @change="register.student_id=''"><option v-for="r in data.classes" :key="r.id" :value="r.id">{{r.title}}</option></select></label><label>Enrolled student<select v-model="register.student_id" required><option v-for="r in registerStudents" :key="r.id" :value="r.id">{{r.student_code||r.id}}</option></select></label><label>Time (your local time)<input v-model="register.occurred_at" type="datetime-local" required></label><label>Status<select v-model="register.status"><option v-for="s in ['Present','Absent','Late','Excused']" :key="s">{{s}}</option></select></label><button class="button primary" :disabled="busy||!register.student_id">Save attendance</button></form>
+            <form v-if="page==='attendance'&&manager" class="panel" @submit.prevent="record"><h2>Record attendance</h2><label>Class session<select v-model="register.class_session_id" required @change="register.student_id=''"><option v-for="r in data.schedule" :key="r.id" :value="r.id">{{r.title}} · {{date(r.starts_at)}}</option></select></label><label>Enrolled student<select v-model="register.student_id" required><option v-for="r in registerStudents" :key="r.id" :value="r.id">{{r.student_code||r.id}}</option></select></label><label>Status<select v-model="register.status"><option v-for="s in ['present','absent','excused']" :key="s" :value="s">{{s}}</option></select></label><label>Note<input v-model="register.note" maxlength="500"></label><button class="button primary" :disabled="busy||!register.student_id">Save attendance</button></form>
           </template>
         </template>
         <footer class="main-footer">A little space. A world of possibility.<span>Authenticated records · No demo data</span></footer>

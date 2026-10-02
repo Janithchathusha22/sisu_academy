@@ -17,21 +17,28 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def read_env(path: Path) -> dict[str, str]:
     values: dict[str, str] = {}
-    for raw in path.read_text(encoding="utf-8").splitlines():
-        line = raw.strip()
-        if not line or line.startswith("#") or "=" not in line:
-            continue
-        key, value = line.split("=", 1)
-        if key.strip().isidentifier():
-            values[key.strip()] = value.strip().strip('"').strip("'")
+    if path.exists():
+        for raw in path.read_text(encoding="utf-8").splitlines():
+            line = raw.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, value = line.split("=", 1)
+            if key.strip().isidentifier():
+                values[key.strip()] = value.strip().strip('"').strip("'")
+    for key in (
+        "VITE_SUPABASE_URL", "SUPABASE_URL", "VITE_SUPABASE_PUBLISHABLE_KEY",
+        "SUPABASE_PUBLISHABLE_KEY", "SUPABASE_SECRET_KEY",
+    ):
+        if os.environ.get(key):
+            values[key] = os.environ[key]
     return values
 
 
 def run(env_file: Path) -> dict[str, str]:
     values = read_env(env_file)
-    url = values.get("SUPABASE_URL", "").rstrip("/")
-    public_key = values.get("SUPABASE_PUBLISHABLE_KEY") or values.get("SUPABASE_ANON_KEY", "")
-    secret_key = values.get("SUPABASE_SECRET_KEY") or values.get("SUPABASE_SERVICE_ROLE_KEY", "")
+    url = (values.get("VITE_SUPABASE_URL") or values.get("SUPABASE_URL", "")).rstrip("/")
+    public_key = values.get("VITE_SUPABASE_PUBLISHABLE_KEY") or values.get("SUPABASE_PUBLISHABLE_KEY", "")
+    secret_key = values.get("SUPABASE_SECRET_KEY", "")
     if not url or not public_key:
         raise RuntimeError("SUPABASE_URL and a publishable key are required")
     admin_available = bool(secret_key) and not secret_key.startswith(("PASTE_", "ROTATED_", "GENERATE_"))
@@ -54,10 +61,8 @@ def run(env_file: Path) -> dict[str, str]:
     os.environ.update({
         "SUPABASE_URL": url,
         "SUPABASE_PUBLISHABLE_KEY": public_key,
-        "SUPABASE_SERVICE_ROLE_KEY": secret_key,
         "FRONTEND_URL": "http://127.0.0.1:5178",
         "CORS_ORIGINS": "http://127.0.0.1:5178",
-        "SESSION_SECRET": secrets.token_urlsafe(48),
     })
 
     with httpx.Client(timeout=20) as client:
@@ -184,7 +189,7 @@ def run(env_file: Path) -> dict[str, str]:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--env-file", type=Path, default=ROOT / "backend" / ".env")
+    parser.add_argument("--env-file", type=Path, default=ROOT / ".env")
     args = parser.parse_args()
     try:
         report = run(args.env_file.resolve())

@@ -6,21 +6,17 @@ or replace the live end-to-end registration test.
 from __future__ import annotations
 
 import json
-from pathlib import Path
-
 import httpx
 import psycopg
 
 from app.config import get_settings
 
 
-ROOT = Path(__file__).resolve().parent.parent
 REQUIRED_COLUMNS = {
     "profiles": {"id", "username", "email", "full_name", "profile_kind", "status"},
     "platform_roles": {"user_id", "role", "active"},
     "institution_memberships": {"id", "institution_id", "user_id", "role", "status"},
     "account_applications": {"id", "user_id", "account_type", "status"},
-    "app_sessions": {"id", "session_hash", "user_id", "token_ciphertext", "csrf_hash", "expires_at"},
 }
 REQUIRED_POLICIES = {
     ("profiles", "profiles_own_select"),
@@ -36,9 +32,6 @@ def run() -> tuple[dict, int]:
     required = {
         "SUPABASE_URL": settings.supabase_url,
         "SUPABASE_PUBLISHABLE_KEY": settings.supabase_publishable_key,
-        "SUPABASE_SERVICE_ROLE_KEY": settings.supabase_service_role_key,
-        "SUPABASE_DATABASE_URL": settings.supabase_database_url,
-        "SESSION_SECRET": settings.session_secret,
     }
     missing = sorted(name for name, value in required.items() if not value)
     report = {
@@ -128,9 +121,5 @@ def run() -> tuple[dict, int]:
 
 if __name__ == "__main__":
     result, exit_code = run()
-    target = ROOT / "docs" / "SUPABASE_DATABASE_VERIFICATION.json"
-    target.write_text(json.dumps(result, indent=2), encoding="utf-8")
-    public_result = {key: value for key, value in result.items() if key not in {"missing_schema", "rls_findings"}}
-    print(json.dumps(public_result, indent=2))
-    print("Detailed report: " + str(target))
+    print(json.dumps(result, indent=2))
     raise SystemExit(exit_code)

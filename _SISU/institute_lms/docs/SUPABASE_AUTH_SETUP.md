@@ -1,50 +1,48 @@
-# Supabase Auth and FastAPI session setup
+# Supabase Auth and FastAPI setup
 
-The active portal now authenticates with Supabase and exchanges the Supabase
-session once for an opaque FastAPI session cookie. The browser does not attach
-bearer tokens to normal application requests. The server encrypts Supabase
-session material and stores it in `public.app_sessions`; PostgREST calls still
-use the user's JWT, so Row Level Security remains effective.
+The active portal signs users in directly with Supabase Auth. Vue sends the
+Supabase access token as `Authorization: Bearer <token>` on API requests.
+FastAPI validates that token with Supabase Auth, loads the user's profile and
+active membership, and queries PostgREST with the same token so database RLS
+is always applied.
 
-## Required setup
+## Environment
 
-1. Rotate any database password or service key that was previously copied into
-   a repository file. Do not reuse it.
-2. Apply the migrations in filename order, ending with
-   `supabase/migrations/202610010001_auth_and_rls.sql`.
-   Inspect first; never reset the existing project.
-3. Copy `backend/.env.example` to `backend/.env` and set the project URL,
-   publishable key, rotated service-role key, database URL, frontend URL, and a
-   random `SESSION_SECRET` of at least 32 characters.
-4. The frontend uses the same-origin `/api` proxy and needs no Supabase key.
-   Set `VITE_API_BASE_URL` only when the API is intentionally hosted at the
-   same browser origin. Never put a service-role key or database password in a
-   `VITE_` variable.
-5. In Supabase Auth URL configuration, allow the exact frontend origin and its
-   `/` callback. Enable Google only after configuring its provider credentials.
-
-## Run and verify
+Use the repository root `.env` as the only local environment file:
 
 ```powershell
-cd D:\new_LMS\LMS\_SISU\institute_lms\backend
-python -m pip install -r requirements.txt
-python verify_database.py
-uvicorn app.main:app --reload --port 8000
-
-cd D:\new_LMS\LMS\_SISU\institute_lms\frontend
-npm ci
-npm test
-npm run dev
+Copy-Item .env.example .env
 ```
 
-`verify_database.py` uses a read-only transaction and writes
-`docs/SUPABASE_DATABASE_VERIFICATION.json`. It prints no credentials. A live
-end-to-end result is valid only after the rotated credentials and both
-migrations have been supplied.
+Set `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, and
+`VITE_API_BASE_URL`. `VITE_` values are public browser configuration. Never
+put a database password or Supabase secret key in a `VITE_` variable.
 
-## Current cutover boundary
+`SUPABASE_DATABASE_URL` is optional and is used by the read-only database
+verifier. `SUPABASE_SECRET_KEY` is optional and is used only by the live Auth
+test to remove the temporary test users it creates. Keep both server-only.
 
-The active Supabase workspace covers authentication, profile/session lookup,
-courses, classes, students/teachers, and attendance. The legacy Frappe modules
-remain in the repository for the remaining feature-by-feature migration; they
-are not deleted by this milestone.
+## Local verification
+
+```powershell
+npx supabase start
+npx supabase db reset
+
+cd backend
+python -m pip install -r requirements.txt
+python -m pytest
+uvicorn app.main:app --reload --port 8000
+
+cd ..\frontend
+npm ci
+npm test
+npm run build:deploy
+```
+
+Run `backend/verify_database.py` only after a database URL has been configured.
+Run `backend/verify_live_auth.py` only against a test-safe project with a valid
+server secret; it creates and then removes temporary student and teacher users.
+
+Migrations must be reviewed and applied in filename order. Do not reset an
+existing hosted project. The hosted schema must first be reconciled with the
+repository migrations and backed up.

@@ -4,12 +4,8 @@ __pycache__/
 *.pyc
 .env
 .env.local
-.env.supabase.local
 .env.*.local
-backend/.env*
 !.env.example
-frontend/.env*
-!**/.env.example
 .pytest_cache/
 .venv/
 backend/.venv/

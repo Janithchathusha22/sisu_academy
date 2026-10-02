@@ -1,8 +1,8 @@
--- Supabase Auth provisioning, server-side sessions, and auth-specific RLS.
+-- Supabase Auth provisioning and auth-specific RLS.
 -- Apply after 202609300002_rls.sql. This migration is additive and removes no data.
 begin;
 
-alter table public.profiles add column if not exists email citext;
+alter table public.profiles add column if not exists email extensions.citext;
 
 create table if not exists public.account_applications (
   id uuid primary key default gen_random_uuid(),
@@ -16,24 +16,13 @@ create table if not exists public.account_applications (
   updated_at timestamptz not null default now()
 );
 
-create table if not exists public.app_sessions (
-  id uuid primary key default gen_random_uuid(),
-  session_hash text not null unique,
-  user_id uuid not null references auth.users(id) on delete cascade,
-  token_ciphertext text not null,
-  csrf_hash text not null,
-  expires_at timestamptz not null,
-  revoked_at timestamptz,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
-);
-create index if not exists app_sessions_user_expiry_idx
-  on public.app_sessions (user_id, expires_at);
+create index if not exists account_applications_status_idx
+  on public.account_applications (status, created_at);
+create index if not exists account_applications_reviewed_by_fkey_idx
+  on public.account_applications (reviewed_by);
 
 alter table public.account_applications enable row level security;
-alter table public.app_sessions enable row level security;
-revoke all on public.app_sessions from public, anon, authenticated;
-grant all on public.app_sessions to service_role;
+alter table public.account_applications force row level security;
 grant all on public.account_applications to service_role;
 revoke insert, update, delete on public.account_applications from anon, authenticated;
 grant select on public.account_applications to authenticated;
@@ -110,7 +99,7 @@ begin
   insert into public.profiles (id, username, email, full_name, profile_kind, status, country)
   values (
     new.id,
-    ('user_' || replace(left(new.id::text, 24), '-', ''))::public.citext,
+    ('user_' || left(md5(new.id::text), 25))::extensions.citext,
     new.email,
     safe_name,
     safe_kind,
@@ -127,6 +116,7 @@ begin
   return new;
 end
 $$;
+revoke all on function public.handle_new_auth_user() from public, anon, authenticated;
 
 -- Never replace an unrelated Auth trigger silently.
 do $$
@@ -150,7 +140,7 @@ for each row execute function public.handle_new_auth_user();
 insert into public.profiles (id, username, email, full_name, profile_kind, status)
 select
   u.id,
-  ('user_' || replace(left(u.id::text, 24), '-', ''))::public.citext,
+  ('user_' || left(md5(u.id::text), 25))::extensions.citext,
   u.email,
   coalesce(nullif(left(btrim(coalesce(u.raw_user_meta_data->>'full_name', '')), 120), ''), 'Sisu user'),
   case

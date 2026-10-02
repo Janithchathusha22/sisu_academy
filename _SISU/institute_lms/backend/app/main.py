@@ -5,10 +5,9 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from postgrest.exceptions import APIError
-from pydantic import AwareDatetime, BaseModel, Field
+from pydantic import BaseModel, Field
 from uuid import UUID
 
-from .auth import router as auth_router
 from .config import get_settings
 from .database import user_client
 from .dependencies import Principal, active_user, current_user, require_roles
@@ -24,8 +23,6 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type", "X-CSRF-Token"],
 )
-app.include_router(auth_router)
-
 from .profiles import router as profiles_router
 from .workspace import router as workspace_router
 
@@ -82,10 +79,10 @@ class CourseInput(BaseModel):
 
 
 class AttendanceInput(BaseModel):
-    class_id: UUID
+    class_session_id: UUID
     student_id: UUID
-    occurred_at: AwareDatetime
-    status: str = Field(pattern="^(Present|Absent|Late|Excused)$")
+    status: str = Field(pattern="^(present|absent|excused)$")
+    note: str = Field(default="", max_length=500)
 
 
 class CourseUpdate(BaseModel):
@@ -95,7 +92,8 @@ class CourseUpdate(BaseModel):
 
 
 class AttendanceUpdate(BaseModel):
-    status: str = Field(pattern="^(Present|Absent|Late|Excused)$")
+    status: str = Field(pattern="^(present|absent|excused)$")
+    note: str | None = Field(default=None, max_length=500)
 
 
 @app.get("/api/health")
@@ -164,19 +162,35 @@ def teachers(user: Principal = Depends(active_user)):
 
 @app.get("/api/attendance")
 def attendance(user: Principal = Depends(active_user)):
-    return user_client(user.token).table("attendance").select("*").order("occurred_at", desc=True).limit(200).execute().data
+    return user_client(user.token).table("attendance").select("*").order("recorded_at", desc=True).limit(200).execute().data
 
 
 @app.post("/api/attendance", status_code=201)
 def record_attendance(data: AttendanceInput, user: Principal = Depends(require_roles("teacher", "institute_admin", "super_admin"))):
-    row = {**data.model_dump(mode="json"), "recorded_by": user.id}
-    return user_client(user.token).table("attendance").insert(row).execute().data[0]
+    client = user_client(user.token)
+    sessions = client.table("class_sessions").select("id,institution_id,class_id,mode").eq(
+        "id", str(data.class_session_id)
+    ).limit(1).execute().data
+    if not sessions:
+        raise HTTPException(404, "Class session not found")
+    session = sessions[0]
+    row = {
+        "institution_id": session["institution_id"],
+        "class_id": session["class_id"],
+        "class_session_id": str(data.class_session_id),
+        "student_membership_id": str(data.student_id),
+        "channel": session["mode"],
+        "status": data.status,
+        "note": data.note or None,
+        "recorded_by": user.id,
+    }
+    return client.table("attendance").insert(row).execute().data[0]
 
 
 @app.put("/api/attendance/{attendance_id}")
 def update_attendance(attendance_id: UUID, data: AttendanceUpdate,
                       user: Principal = Depends(require_roles("teacher", "institute_admin", "super_admin"))):
-    rows = user_client(user.token).table("attendance").update(data.model_dump()).eq("id", str(attendance_id)).execute().data
+    rows = user_client(user.token).table("attendance").update(data.model_dump(exclude_none=True)).eq("id", str(attendance_id)).execute().data
     if not rows:
         raise HTTPException(404, "Attendance record not found")
     return rows[0]

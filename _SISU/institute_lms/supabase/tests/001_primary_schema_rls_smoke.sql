@@ -14,6 +14,18 @@ begin
 end;
 $$;
 
+create or replace function pg_temp.assert_insufficient_privilege(command text, message text)
+returns void
+language plpgsql
+as $$
+begin
+  execute command;
+  raise exception 'assertion failed: %', message;
+exception
+  when insufficient_privilege then null;
+end;
+$$;
+
 select pg_temp.assert_true(
   not exists (
     select 1
@@ -25,6 +37,7 @@ select pg_temp.assert_true(
       ('exams'), ('exam_questions'), ('exam_attempts'), ('exam_answers'), ('exam_results'),
       ('announcements'), ('feedback'), ('news'), ('news_images'), ('invoices'), ('payments'),
       ('notifications'), ('support_tickets'), ('support_replies'), ('audit_events'), ('outbox_events')
+      , ('account_applications')
     ) required(name)
     where to_regclass('public.' || required.name) is null
   ),
@@ -45,6 +58,7 @@ select pg_temp.assert_true(
         'exams', 'exam_questions', 'exam_attempts', 'exam_answers', 'exam_results',
         'announcements', 'feedback', 'news', 'news_images', 'invoices', 'payments',
         'notifications', 'support_tickets', 'support_replies', 'audit_events', 'outbox_events'
+        , 'account_applications'
       )
       and (not c.relrowsecurity or not c.relforcerowsecurity)
   ),
@@ -124,17 +138,38 @@ insert into auth.users (
   raw_app_meta_data, raw_user_meta_data, created_at, updated_at
 )
 values
-  ('00000000-0000-0000-0000-000000000000', '10000000-0000-0000-0000-000000000001', 'authenticated', 'authenticated', 'admin-a@example.invalid', '', now(), '{}'::jsonb, '{}'::jsonb, now(), now()),
-  ('00000000-0000-0000-0000-000000000000', '10000000-0000-0000-0000-000000000002', 'authenticated', 'authenticated', 'teacher-a@example.invalid', '', now(), '{}'::jsonb, '{}'::jsonb, now(), now()),
-  ('00000000-0000-0000-0000-000000000000', '10000000-0000-0000-0000-000000000003', 'authenticated', 'authenticated', 'student-a@example.invalid', '', now(), '{}'::jsonb, '{}'::jsonb, now(), now()),
-  ('00000000-0000-0000-0000-000000000000', '10000000-0000-0000-0000-000000000004', 'authenticated', 'authenticated', 'student-b@example.invalid', '', now(), '{}'::jsonb, '{}'::jsonb, now(), now());
+  ('00000000-0000-0000-0000-000000000000', '10000000-0000-0000-0000-000000000001', 'authenticated', 'authenticated', 'admin-a@example.invalid', '', now(), '{}'::jsonb, '{"account_type":"institute","full_name":"Admin A"}'::jsonb, now(), now()),
+  ('00000000-0000-0000-0000-000000000000', '10000000-0000-0000-0000-000000000002', 'authenticated', 'authenticated', 'teacher-a@example.invalid', '', now(), '{}'::jsonb, '{"account_type":"teacher","full_name":"Teacher A"}'::jsonb, now(), now()),
+  ('00000000-0000-0000-0000-000000000000', '10000000-0000-0000-0000-000000000003', 'authenticated', 'authenticated', 'student-a@example.invalid', '', now(), '{}'::jsonb, '{"account_type":"student","full_name":"Student A"}'::jsonb, now(), now()),
+  ('00000000-0000-0000-0000-000000000000', '10000000-0000-0000-0000-000000000004', 'authenticated', 'authenticated', 'student-b@example.invalid', '', now(), '{}'::jsonb, '{"account_type":"student","full_name":"Student B"}'::jsonb, now(), now());
+
+select pg_temp.assert_true(
+  (select count(*) = 4 from public.profiles
+   where id::text like '10000000-0000-0000-0000-00000000000%'),
+  'Auth trigger provisions one profile per new Auth user'
+);
+select pg_temp.assert_true(
+  (select profile_kind = 'teacher' and status = 'pending'
+   from public.profiles where id = '10000000-0000-0000-0000-000000000002'),
+  'teacher signup metadata creates a pending teacher profile'
+);
+select pg_temp.assert_true(
+  (select count(*) = 2 from public.account_applications
+   where user_id in ('10000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000002')),
+  'teacher and institute signups create review applications'
+);
 
 insert into public.profiles (id, username, full_name, profile_kind, status)
 values
   ('10000000-0000-0000-0000-000000000001', 'admin_a', 'Admin A', 'institute', 'verified'),
   ('10000000-0000-0000-0000-000000000002', 'teacher_a', 'Teacher A', 'teacher', 'verified'),
   ('10000000-0000-0000-0000-000000000003', 'student_a', 'Student A', 'student', 'verified'),
-  ('10000000-0000-0000-0000-000000000004', 'student_b', 'Student B', 'student', 'verified');
+  ('10000000-0000-0000-0000-000000000004', 'student_b', 'Student B', 'student', 'verified')
+on conflict (id) do update set
+  username = excluded.username,
+  full_name = excluded.full_name,
+  profile_kind = excluded.profile_kind,
+  status = excluded.status;
 
 insert into public.institutions (id, owner_user_id, code, title)
 values
@@ -222,6 +257,12 @@ select pg_temp.assert_true(
   private.can_access_class_content('40000000-0000-0000-0000-000000000001'),
   'paid enrollment opens the content gate'
 );
+select pg_temp.assert_insufficient_privilege(
+  $$insert into public.courses (institution_id, created_by, title)
+    values ('20000000-0000-0000-0000-000000000001',
+            '10000000-0000-0000-0000-000000000003', 'Forbidden student course')$$,
+  'student cannot create a course'
+);
 
 reset role;
 set local role authenticated;
@@ -249,6 +290,25 @@ select pg_temp.assert_true(
 select pg_temp.assert_true(
   (select count(*) = 1 from public.students where id = '30000000-0000-0000-0000-000000000003'),
   'teacher compatibility view exposes only an enrolled student'
+);
+select pg_temp.assert_true(
+  (select count(*) = 0 from public.invoices),
+  'teaching access does not expose student invoices'
+);
+
+insert into public.attendance (
+  institution_id, class_id, class_session_id, student_membership_id,
+  channel, status, recorded_by
+) values (
+  '20000000-0000-0000-0000-000000000001',
+  '40000000-0000-0000-0000-000000000001',
+  '50000000-0000-0000-0000-000000000001',
+  '30000000-0000-0000-0000-000000000003',
+  'online', 'present', '10000000-0000-0000-0000-000000000002'
+);
+select pg_temp.assert_true(
+  (select count(*) = 1 from public.attendance),
+  'assigned teacher can record attendance'
 );
 
 reset role;

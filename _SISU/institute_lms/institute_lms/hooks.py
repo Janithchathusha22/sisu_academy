@@ -9,7 +9,7 @@ role_home_page = {"Institute Student": "campus", "Institute Teacher": "campus", 
 after_install = "institute_lms.setup.after_install"
 after_migrate = "institute_lms.setup.add_indexes"
 website_route_rules = [{"from_route": "/campus", "to_route": "campus"}]
-scheduler_events = {"cron": {"*/5 * * * *": ["institute_lms.notifications.dispatch", "institute_lms.notifications.dispatch_email", "institute_lms.calendar_sync.dispatch", "institute_lms.supabase_sync.run"]},
+scheduler_events = {"cron": {"*/5 * * * *": ["institute_lms.notifications.dispatch", "institute_lms.notifications.dispatch_email", "institute_lms.calendar_sync.dispatch"]},
                     "daily": ["institute_lms.billing.daily", "institute_lms.retention.purge_expired_promotions", "institute_lms.profiles.purge_updates"]}
 doc_events = {"IL Institute": {"validate": "institute_lms.validation.validate_institute"},
               "IL Session": {"on_update":"institute_lms.calendar_sync.session_changed"},

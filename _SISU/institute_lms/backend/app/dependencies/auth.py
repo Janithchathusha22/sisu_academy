@@ -5,6 +5,7 @@ from typing import Any
 
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from postgrest.exceptions import APIError
 
 from ..config import Settings
 from ..database import user_client
@@ -36,6 +37,19 @@ class Principal:
     def is_super_admin(self) -> bool:
         return "super_admin" in self.platform_roles
 
+    @property
+    def role(self) -> str | None:
+        return self.profile.get("role")
+
+    @property
+    def institution_id(self) -> str | None:
+        value = self.profile.get("institution_id")
+        return str(value) if value else None
+
+    @property
+    def account_status(self) -> str:
+        return str(self.profile.get("account_status") or "pending")
+
     def membership_for(self, institution_id: str) -> Membership | None:
         return next((item for item in self.memberships if item.institution_id == institution_id), None)
 
@@ -47,8 +61,13 @@ def runtime_settings(request: Request) -> Settings:
     return settings
 
 
-def _first(rows: list[dict[str, Any]]) -> dict[str, Any]:
-    return rows[0] if rows else {}
+def _optional_rows(query) -> list[dict[str, Any]]:
+    try:
+        return query.execute().data or []
+    except APIError as exc:
+        if exc.code in {"42P01", "PGRST205"}:
+            return []
+        raise
 
 
 def get_current_user(
@@ -72,23 +91,17 @@ def get_current_user(
         profile = load_identity(client, user_id)
         if not profile:
             raise HTTPException(status.HTTP_403_FORBIDDEN, "Profile not provisioned")
-        role_rows = (
+        role_rows = _optional_rows(
             client.table("platform_roles")
             .select("role,active")
             .eq("user_id", user_id)
             .eq("active", True)
-            .execute()
-            .data
-            or []
         )
-        membership_rows = (
+        membership_rows = _optional_rows(
             client.table("institution_memberships")
             .select("id,institution_id,user_id,role,status,member_code")
             .eq("user_id", user_id)
             .eq("status", "active")
-            .execute()
-            .data
-            or []
         )
     except HTTPException:
         raise

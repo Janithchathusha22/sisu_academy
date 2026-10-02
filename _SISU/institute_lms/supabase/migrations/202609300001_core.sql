@@ -4,7 +4,7 @@
 begin;
 
 create extension if not exists pgcrypto;
-create extension if not exists citext;
+create extension if not exists citext with schema extensions;
 
 create schema if not exists private;
 revoke all on schema private from public, anon, authenticated;
@@ -22,7 +22,7 @@ $$;
 
 create table public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
-  username citext not null unique,
+  username extensions.citext not null unique,
   full_name text not null,
   profile_kind text not null check (profile_kind in ('student', 'teacher', 'institute')),
   status text not null default 'pending' check (status in ('pending', 'verified', 'rejected', 'suspended')),
@@ -63,7 +63,7 @@ create table public.platform_roles (
 create table public.institutions (
   id uuid primary key default gen_random_uuid(),
   owner_user_id uuid references auth.users(id) on delete set null,
-  code citext not null unique,
+  code extensions.citext not null unique,
   title text not null,
   logo_path text,
   accent text,
@@ -892,6 +892,7 @@ create index platform_roles_active_idx on public.platform_roles (role, active, u
 create index institution_memberships_user_idx on public.institution_memberships (user_id, status);
 create index institution_memberships_tenant_role_idx on public.institution_memberships (institution_id, role, status);
 create index courses_tenant_status_idx on public.courses (institution_id, active, published);
+create index courses_created_by_idx on public.courses (created_by);
 create index course_modules_course_position_idx on public.course_modules (course_id, position);
 create index lessons_module_position_idx on public.lessons (module_id, position);
 create index programmes_tenant_status_idx on public.programmes (institution_id, active, published);
@@ -922,6 +923,92 @@ create index support_tickets_tenant_status_idx on public.support_tickets (instit
 create index support_replies_ticket_idx on public.support_replies (ticket_id, created_at);
 create index audit_events_tenant_created_idx on public.audit_events (institution_id, created_at desc);
 create index outbox_events_dispatch_idx on public.outbox_events (status, available_at, created_at) where status in ('pending', 'failed');
+
+-- Every foreign key has a covering index so parent updates/deletes and tenant
+-- joins do not require full child-table scans.
+create index announcements_class_fk_idx on public.announcements (class_id, institution_id);
+create index announcements_created_by_fkey_idx on public.announcements (created_by);
+create index announcements_institution_id_fkey_idx on public.announcements (institution_id);
+create index assignment_submissions_assignment_fk_idx on public.assignment_submissions (assignment_id, institution_id);
+create index assignment_submissions_graded_by_fkey_idx on public.assignment_submissions (graded_by);
+create index assignment_submissions_institution_id_fkey_idx on public.assignment_submissions (institution_id);
+create index assignment_submissions_student_fk_idx on public.assignment_submissions (student_membership_id, institution_id);
+create index assignments_class_fk_idx on public.assignments (class_id, institution_id);
+create index assignments_institution_id_fkey_idx on public.assignments (institution_id);
+create index assignments_published_by_fkey_idx on public.assignments (published_by);
+create index attendance_class_fk_idx on public.attendance (class_id, institution_id);
+create index attendance_institution_id_fkey_idx on public.attendance (institution_id);
+create index attendance_recorded_by_fkey_idx on public.attendance (recorded_by);
+create index attendance_session_fk_idx on public.attendance (class_session_id, institution_id);
+create index attendance_student_fk_idx on public.attendance (student_membership_id, institution_id);
+create index audit_events_actor_user_id_fkey_idx on public.audit_events (actor_user_id);
+create index class_sessions_class_fk_idx on public.class_sessions (class_id, institution_id);
+create index class_sessions_institution_id_fkey_idx on public.class_sessions (institution_id);
+create index classes_course_fk_idx on public.classes (course_id, institution_id);
+create index classes_owner_user_id_fkey_idx on public.classes (owner_user_id);
+create index classes_programme_fk_idx on public.classes (programme_id, institution_id);
+create index classes_public_provider_profile_id_fkey_idx on public.classes (public_provider_profile_id);
+create index classes_teacher_fk_idx on public.classes (teacher_membership_id, institution_id);
+create index course_modules_course_fk_idx on public.course_modules (course_id, institution_id);
+create index course_modules_institution_id_fkey_idx on public.course_modules (institution_id);
+create index enrollments_class_fk_idx on public.enrollments (class_id, institution_id);
+create index enrollments_institution_id_fkey_idx on public.enrollments (institution_id);
+create index enrollments_programme_fk_idx on public.enrollments (programme_enrollment_id, institution_id);
+create index enrollments_student_fk_idx on public.enrollments (student_membership_id, institution_id);
+create index exam_answers_attempt_fk_idx on public.exam_answers (attempt_id, institution_id);
+create index exam_answers_institution_id_fkey_idx on public.exam_answers (institution_id);
+create index exam_answers_question_fk_idx on public.exam_answers (question_id, institution_id);
+create index exam_attempts_exam_fk_idx on public.exam_attempts (exam_id, institution_id);
+create index exam_attempts_institution_id_fkey_idx on public.exam_attempts (institution_id);
+create index exam_attempts_student_fk_idx on public.exam_attempts (student_membership_id, institution_id);
+create index exam_questions_exam_fk_idx on public.exam_questions (exam_id, institution_id);
+create index exam_questions_institution_id_fkey_idx on public.exam_questions (institution_id);
+create index exam_results_attempt_fk_idx on public.exam_results (attempt_id, institution_id);
+create index exam_results_exam_fk_idx on public.exam_results (exam_id, institution_id);
+create index exam_results_graded_by_fkey_idx on public.exam_results (graded_by);
+create index exam_results_institution_id_fkey_idx on public.exam_results (institution_id);
+create index exam_results_student_fk_idx on public.exam_results (student_membership_id, institution_id);
+create index exams_class_fk_idx on public.exams (class_id, institution_id);
+create index exams_institution_id_fkey_idx on public.exams (institution_id);
+create index exams_material_fk_idx on public.exams (material_id, institution_id);
+create index exams_published_by_fkey_idx on public.exams (published_by);
+create index feedback_class_fk_idx on public.feedback (class_id, institution_id);
+create index feedback_institution_id_fkey_idx on public.feedback (institution_id);
+create index feedback_session_fk_idx on public.feedback (class_session_id, institution_id);
+create index feedback_student_fk_idx on public.feedback (student_membership_id, institution_id);
+create index institution_memberships_approved_by_fkey_idx on public.institution_memberships (approved_by);
+create index institutions_owner_user_id_fkey_idx on public.institutions (owner_user_id);
+create index invoices_class_fk_idx on public.invoices (class_id, institution_id);
+create index invoices_enrollment_fk_idx on public.invoices (enrollment_id, institution_id);
+create index invoices_programme_enrollment_fk_idx on public.invoices (programme_enrollment_id, institution_id);
+create index invoices_student_fk_idx on public.invoices (student_membership_id, institution_id);
+create index lessons_institution_id_fkey_idx on public.lessons (institution_id);
+create index lessons_module_fk_idx on public.lessons (module_id, institution_id);
+create index materials_class_fk_idx on public.materials (class_id, institution_id);
+create index materials_institution_id_fkey_idx on public.materials (institution_id);
+create index materials_session_fk_idx on public.materials (class_session_id, institution_id);
+create index news_author_fk_idx on public.news (author_membership_id, institution_id);
+create index news_images_institution_id_fkey_idx on public.news_images (institution_id);
+create index news_images_news_fk_idx on public.news_images (news_id, institution_id);
+create index notifications_institution_id_fkey_idx on public.notifications (institution_id);
+create index outbox_events_institution_id_fkey_idx on public.outbox_events (institution_id);
+create index payments_institution_id_fkey_idx on public.payments (institution_id);
+create index payments_invoice_fk_idx on public.payments (invoice_id, institution_id);
+create index platform_roles_granted_by_fkey_idx on public.platform_roles (granted_by);
+create index profiles_reviewed_by_fkey_idx on public.profiles (reviewed_by);
+create index programme_enrollments_billing_enrollment_fk_idx on public.programme_enrollments (billing_enrollment_id, institution_id);
+create index programme_enrollments_institution_id_fkey_idx on public.programme_enrollments (institution_id);
+create index programme_enrollments_programme_fk_idx on public.programme_enrollments (programme_id, institution_id);
+create index programme_enrollments_student_fk_idx on public.programme_enrollments (student_membership_id, institution_id);
+create index programme_modules_class_fk_idx on public.programme_modules (class_id, institution_id);
+create index programme_modules_institution_id_fkey_idx on public.programme_modules (institution_id);
+create index programme_modules_programme_fk_idx on public.programme_modules (programme_id, institution_id);
+create index programme_modules_teacher_fk_idx on public.programme_modules (teacher_membership_id, institution_id);
+create index programmes_provider_profile_id_fkey_idx on public.programmes (provider_profile_id);
+create index support_replies_author_user_id_fkey_idx on public.support_replies (author_user_id);
+create index support_replies_institution_id_fkey_idx on public.support_replies (institution_id);
+create index support_replies_ticket_fk_idx on public.support_replies (ticket_id, institution_id);
+create index support_tickets_requester_user_id_fkey_idx on public.support_tickets (requester_user_id);
 
 do $$
 declare
