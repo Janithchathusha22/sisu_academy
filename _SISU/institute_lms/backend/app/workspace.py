@@ -34,13 +34,41 @@ class ScheduleInput(BaseModel):
 def create_class(data: ClassInput, user: Principal=Depends(require_roles('super_admin','institute_admin'))):
     if user.role != 'super_admin' and str(data.institution_id) != user.institution_id:
         raise HTTPException(403, 'Wrong institution')
-    return user_client(user.token).table('classes').insert(data.model_dump(mode='json')).execute().data[0]
+    row = data.model_dump(mode='json', exclude={'teacher_id'})
+    row['teacher_membership_id'] = str(data.teacher_id) if data.teacher_id else None
+    return user_client(user.token).table('classes').insert(row).execute().data[0]
 
 @router.post('/enrollments', status_code=201)
 def enroll(data: EnrollmentInput, user: Principal=Depends(require_roles('super_admin','institute_admin'))):
     if user.role != 'super_admin' and str(data.institution_id) != user.institution_id:
         raise HTTPException(403, 'Wrong institution')
-    return user_client(user.token).table('enrollments').insert(data.model_dump(mode='json')).execute().data[0]
+    client = user_client(user.token)
+    classes = (
+        client.table('classes')
+        .select('id,institution_id')
+        .eq('id', str(data.class_id))
+        .limit(1)
+        .execute()
+        .data
+    )
+    if not classes or classes[0]['institution_id'] != str(data.institution_id):
+        raise HTTPException(422, 'The selected class does not belong to this institution.')
+    students = (
+        client.table('institution_memberships')
+        .select('id')
+        .eq('id', str(data.student_id))
+        .eq('institution_id', str(data.institution_id))
+        .eq('role', 'student')
+        .eq('status', 'active')
+        .limit(1)
+        .execute()
+        .data
+    )
+    if not students:
+        raise HTTPException(422, 'Select an active student membership in this institution.')
+    row = data.model_dump(mode='json', exclude={'student_id'})
+    row['student_membership_id'] = str(data.student_id)
+    return client.table('enrollments').insert(row).execute().data[0]
 
 @router.post('/schedule', status_code=201)
 def schedule(data: ScheduleInput, user: Principal=Depends(require_roles('super_admin','institute_admin'))):

@@ -112,7 +112,13 @@ def me(user: Principal = Depends(current_user)):
     ).eq("id", user.id).limit(1).execute().data
     if not rows:
         raise HTTPException(403, "Profile not provisioned")
-    return rows[0]
+    return {
+        **rows[0],
+        "role": user.role,
+        "application_role": user.role,
+        "institution_id": user.institution_id,
+        "account_status": user.account_status,
+    }
 
 
 @app.get("/api/courses")

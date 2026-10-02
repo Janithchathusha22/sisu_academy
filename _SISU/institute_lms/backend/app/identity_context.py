@@ -40,9 +40,16 @@ def load_identity(client, user_id: str) -> dict[str, Any] | None:
     membership = memberships[0] if memberships else {}
     platform_role = next((row["role"] for row in platform_roles if row.get("role") == "super_admin"), None)
     verified = profile.get("status") == "verified"
-    # The profile kind is safe identity metadata, not an authorization grant.
-    # active_user still requires a verified profile before any role check.
-    role = platform_role or membership.get("role") or profile.get("profile_kind")
+    expected_membership_role = {
+        "student": "student",
+        "teacher": "teacher",
+        "institute": "institute_admin",
+    }.get(profile.get("profile_kind"))
+    membership_role = membership.get("role")
+    if membership_role != expected_membership_role:
+        membership = {}
+        membership_role = None
+    role = platform_role or membership_role
     return {
         **profile,
         "role": role,

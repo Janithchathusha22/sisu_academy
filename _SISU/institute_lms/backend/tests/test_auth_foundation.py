@@ -14,18 +14,25 @@ class IdentityClient:
     def __init__(self, rows):
         self.rows = rows
         self.name = ""
+        self.filters = []
 
     def table(self, name):
         self.name = name
+        self.filters = []
         return self
 
     def select(self, *args): return self
-    def eq(self, *args): return self
+    def eq(self, column, value):
+        self.filters.append((column, value))
+        return self
     def limit(self, *args): return self
 
     def execute(self):
         from types import SimpleNamespace
-        return SimpleNamespace(data=self.rows.get(self.name, []))
+        rows = self.rows.get(self.name, [])
+        for column, value in self.filters:
+            rows = [row for row in rows if row.get(column) == value]
+        return SimpleNamespace(data=rows)
 
 
 def test_session_tokens_are_encrypted_and_round_trip():
@@ -61,13 +68,32 @@ def test_mutation_rejects_missing_cookie():
     assert response.status_code == 401
 
 
-def test_student_identity_uses_verified_profile_without_membership():
+def test_verified_student_profile_without_membership_does_not_grant_student_role():
     identity = load_identity(IdentityClient({
         "profiles": [{"id": "student", "profile_kind": "student", "status": "verified"}],
         "platform_roles": [], "institution_memberships": [],
     }), "student")
-    assert identity["role"] == "student"
+    assert identity["role"] is None
     assert identity["account_status"] == "active"
+    assert identity["institution_id"] is None
+
+
+def test_student_role_and_institution_come_from_active_student_membership():
+    identity = load_identity(IdentityClient({
+        "profiles": [{"id": "student", "profile_kind": "student", "status": "verified"}],
+        "platform_roles": [],
+        "institution_memberships": [{
+            "id": "membership",
+            "user_id": "student",
+            "institution_id": "institution",
+            "role": "student",
+            "status": "active",
+            "member_code": "S001",
+        }],
+    }), "student")
+    assert identity["role"] == "student"
+    assert identity["institution_id"] == "institution"
+    assert identity["membership_id"] == "membership"
 
 
 def test_pending_teacher_keeps_kind_but_cannot_be_active():
@@ -75,5 +101,46 @@ def test_pending_teacher_keeps_kind_but_cannot_be_active():
         "profiles": [{"id": "teacher", "profile_kind": "teacher", "status": "pending"}],
         "platform_roles": [], "institution_memberships": [],
     }), "teacher")
-    assert identity["role"] == "teacher"
+    assert identity["role"] is None
     assert identity["account_status"] == "pending"
+
+
+def test_profile_kind_from_account_selection_does_not_grant_role():
+    identity = load_identity(IdentityClient({
+        "profiles": [{"id": "teacher", "profile_kind": "teacher", "status": "verified"}],
+        "platform_roles": [], "institution_memberships": [],
+    }), "teacher")
+    assert identity["role"] is None
+
+
+def test_mismatched_membership_role_does_not_set_a_student_institution():
+    identity = load_identity(IdentityClient({
+        "profiles": [{"id": "student", "profile_kind": "student", "status": "verified"}],
+        "platform_roles": [],
+        "institution_memberships": [{
+            "id": "old-admin-membership",
+            "user_id": "student",
+            "institution_id": "wrong-institution",
+            "role": "institute_admin",
+            "status": "active",
+        }],
+    }), "student")
+    assert identity["role"] is None
+    assert identity["institution_id"] is None
+    assert identity["membership_id"] is None
+
+
+def test_super_admin_role_requires_active_database_platform_role():
+    inactive_identity = load_identity(IdentityClient({
+        "profiles": [{"id": "admin", "profile_kind": "student", "status": "verified"}],
+        "platform_roles": [{"user_id": "admin", "role": "super_admin", "active": False}],
+        "institution_memberships": [],
+    }), "admin")
+    assert inactive_identity["role"] is None
+
+    active_identity = load_identity(IdentityClient({
+        "profiles": [{"id": "admin", "profile_kind": "student", "status": "verified"}],
+        "platform_roles": [{"user_id": "admin", "role": "super_admin", "active": True}],
+        "institution_memberships": [],
+    }), "admin")
+    assert active_identity["role"] == "super_admin"

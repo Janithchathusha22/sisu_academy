@@ -3,15 +3,17 @@ import {computed,onMounted,ref} from 'vue'
 import Icon from '../Icon.vue'
 import Art from '../Art.vue'
 import {api,currentSession,logoutSession} from '../lib/api'
+import {loadSections} from '../lib/section-loader'
 
 const props=defineProps({session:{type:Object,required:true}})
 const emit=defineEmits(['logout','session'])
 const page=ref('dashboard'),mobile=ref(false),busy=ref(false),loaded=ref(false),error=ref(''),message=ref('')
+const loadErrors=ref({})
 const data=ref({}),profile=ref({...props.session.profile}),fullName=ref(profile.value.full_name)
 const manager=computed(()=>['teacher','institute_admin','super_admin'].includes(profile.value.role))
 const admin=computed(()=>['institute_admin','super_admin'].includes(profile.value.role))
 const owner=computed(()=>profile.value.role==='super_admin')
-const active=computed(()=>profile.value.account_status==='active')
+const active=computed(()=>profile.value.account_status==='active'&&!!profile.value.role)
 const roleLabel=computed(()=>({student:'Student',teacher:'Teacher',institute_admin:'Institute administrator',super_admin:'Platform administrator'}[profile.value.role]||'Applicant'))
 const nav=computed(()=>[
   ['dashboard','LayoutDashboard','Overview'],['classes','BookOpen','Classrooms'],['courses','GraduationCap','Courses'],
@@ -51,9 +53,19 @@ async function load(){
     if(manager.value)paths.push('students','teachers')
     if(admin.value)paths.push('institutions')
     if(owner.value)paths.push('applications','profiles/unassigned')
-    const result=await Promise.all(paths.map(p=>api('/api/'+p)))
-    data.value=Object.fromEntries(paths.map((p,i)=>[p,result[i]]));loaded.value=true
-  }catch(e){data.value={};error.value=e.message}finally{busy.value=false}
+    const sections=await loadSections(paths,data.value,api)
+    data.value=sections.data
+    loadErrors.value=sections.errors
+    if(owner.value){
+      const institutions=data.value.institutions||[]
+      for(const row of [...(data.value.applications||[]),...(data.value['profiles/unassigned']||[])]){
+        if(!institutions.some(item=>item.id===selectedInstitutions.value[row.id])){
+          selectedInstitutions.value[row.id]=institutions[0]?.id||''
+        }
+      }
+    }
+    loaded.value=true
+  }catch(e){error.value=e.message}finally{busy.value=false}
 }
 async function save(path,body,method='POST'){
   if(busy.value)return false
@@ -65,7 +77,7 @@ async function createCourse(){if(await save('courses',{...course.value,instituti
 async function createClass(){if(await save('classes',{...classroom.value,institution_id:institution.value,course_id:classroom.value.course_id||null,teacher_id:classroom.value.teacher_id||null}))classroom.value={title:'',subject:'',course_id:'',teacher_id:''}}
 async function record(){await save('attendance',{...register.value,occurred_at:new Date(register.value.occurred_at).toISOString()})}
 async function schedule(){await save('schedule',{...meeting.value,starts_at:new Date(meeting.value.starts_at).toISOString(),ends_at:new Date(meeting.value.ends_at).toISOString()})}
-async function review(row,decision){await save('applications/'+row.id+'/review',{decision,institution_id:selectedInstitutions.value[row.id]||null})}
+async function review(row,decision){await save('applications/'+row.id+'/review',{decision,institution_id:row.account_type==='student'?null:selectedInstitutions.value[row.id]||null})}
 async function saveProfile(){if(await save('me',{full_name:fullName.value.trim()},'PUT'))fullName.value=profile.value.full_name}
 async function logout(){if(busy.value)return;busy.value=true;try{await logoutSession();emit('logout')}catch(e){error.value=e.message}finally{busy.value=false}}
 onMounted(load)
@@ -85,24 +97,30 @@ onMounted(load)
       <main id="main-content" :aria-busy="busy">
         <div class="page-heading"><div><span class="eyebrow">YOUR EVERYDAY, A LITTLE BRIGHTER</span><h1>{{page==='dashboard'?'Hello, '+(profile.full_name||'there'):title}} <span class="greeting-spark">✺</span></h1><p>Your classes. Your people. Your own pace.</p></div><button class="button subtle" :disabled="busy" @click="load">{{busy?'Loading…':'Refresh'}}</button></div>
         <p v-if="error" class="connection-error" role="alert">{{error}} <button :disabled="busy" @click="load">Retry</button></p>
+        <p v-if="Object.keys(loadErrors).length" class="connection-note" role="status">Some sections could not load: {{Object.keys(loadErrors).join(', ')}}. Available data is preserved. <button :disabled="busy" @click="load">Retry</button></p>
         <p v-if="message" class="connection-success" role="status">{{message}}</p>
         <section v-if="page==='profile'" class="panel"><h2>Your account</h2><p>{{session.user.email}} · {{roleLabel}} · {{profile.account_status}}</p><form @submit.prevent="saveProfile"><label>Full name<input v-model="fullName" required maxlength="120"></label><button class="button primary" :disabled="busy||!fullName?.trim()">Save profile</button></form><p>Roles and institution membership can only be changed by an authorized administrator.</p></section>
-        <section v-else-if="!active" class="panel"><h2>{{profile.account_status==='pending'?'Awaiting approval':'Account '+profile.account_status}}</h2><p>Your account exists, but access to LMS records is not active. Contact the administrator. Refresh after your application is reviewed.</p></section>
+        <section v-else-if="!active" class="panel"><h2>{{profile.profile_kind==='student'&&profile.account_status==='active'?'Awaiting institution assignment':profile.account_status==='pending'?'Awaiting approval':'Account '+profile.account_status}}</h2><p v-if="profile.profile_kind==='student'&&profile.account_status==='active'">Your student profile is verified, but you do not yet have an active institution membership. An administrator must assign you to an institution before your student workspace is available.</p><p v-else>Your account exists, but access to LMS records is not active. Contact the administrator. Refresh after your application is reviewed.</p></section>
         <template v-else>
           <p v-if="!profile.institution_id&&!owner" class="connection-note">Your account is active but has no institution assigned yet. An administrator must link your membership before classes become available.</p>
           <label v-if="owner&&['courses','classes'].includes(page)" class="institution-picker">Institution<select v-model="institution"><option value="" disabled>Choose institution</option><option v-for="r in data.institutions" :key="r.id" :value="r.id">{{r.title}}</option></select></label>
           <template v-if="page==='dashboard'">
+            <p v-if="loadErrors.classes" class="connection-error" role="alert">Classrooms: {{loadErrors.classes}}</p>
+            <p v-if="loadErrors.courses" class="connection-error" role="alert">Courses: {{loadErrors.courses}}</p>
+            <p v-if="role==='student'&&profile.institution_id&&loaded&&!loadErrors.classes&&!(data.classes||[]).length" class="connection-note">Your institution membership is active, but you are not enrolled in a classroom yet. Ask your institution administrator to enroll you in a class.</p>
+            <p v-if="role==='student'&&profile.institution_id&&loaded&&!loadErrors.courses&&!(data.courses||[]).length" class="connection-note">No courses are available to you yet. Courses will appear when your institution makes them available.</p>
             <section class="hero"><div class="hero-copy"><span class="hero-label">YOUR SPACE TO GROW</span><h2>A little progress.<br>A world of possibility.</h2><p>Your learning and teaching, together in one place.</p><button class="button dark" @click="navigate('classes')">Your classrooms <Icon name="ArrowRight" :size="17"/></button></div><Art/></section>
             <div class="stats-row"><div v-for="stat in stats" :key="stat[0]" class="stat-card"><span class="stat-icon violet"><Icon name="BookOpen"/></span><div><strong>{{loaded?stat[1]:'—'}}</strong><span>{{stat[0]}}</span></div></div></div>
             <div class="connected-grid"><section class="panel"><h2>Coming up</h2><article v-for="r in (data.schedule||[]).filter(s=>new Date(s.ends_at)>new Date()).sort((a,b)=>a.starts_at.localeCompare(b.starts_at)).slice(0,5)" :key="r.id" class="data-row"><h3>{{r.title}}</h3><p>{{className(r.class_id)}} · {{date(r.starts_at)}}</p></article><p v-if="loaded&&!(data.schedule||[]).some(s=>new Date(s.ends_at)>new Date())">No upcoming sessions.</p></section><section class="panel"><h2>Your workspace</h2><p>Use the sidebar for your course, schedule and learning records.</p><p>Lists show up to 200 recent records. Counts describe the loaded records, not institution-wide totals.</p><p>Legacy marketplace, wallet, AI papers and community screens are retained in the separate preview; those integrations are not live in Supabase yet.</p></section></div>
           </template>
           <template v-else-if="page==='approvals'&&owner">
             <section class="panel"><h2>Institutions</h2><form @submit.prevent="save('institutions',newInstitution)"><label>Name<input v-model="newInstitution.title" required maxlength="120"></label><label>Unique code<input v-model="newInstitution.code" required pattern="[a-zA-Z0-9_-]+" minlength="2" maxlength="40"></label><button class="button primary" :disabled="busy">Create institution</button></form></section>
-            <section class="panel"><h2>Provider applications</h2><article v-for="r in data.applications" :key="r.id" class="data-row"><h3>{{r.details.full_name||r.user_id}} · {{r.account_type}}</h3><p>{{r.details.organization||r.details.subject}}</p><label>Institution<select v-model="selectedInstitutions[r.id]"><option v-for="i in data.institutions" :key="i.id" :value="i.id">{{i.title}}</option></select></label><div class="actions"><button class="button primary" :disabled="busy||!selectedInstitutions[r.id]" @click="review(r,'approved')">Approve</button><button class="button subtle" :disabled="busy" @click="review(r,'rejected')">Reject</button></div></article><p v-if="loaded&&!data.applications?.length">No pending applications.</p></section>
-            <section class="panel"><h2>Students awaiting institution assignment</h2><article v-for="r in data['profiles/unassigned']" :key="r.id" class="data-row"><h3>{{r.full_name||r.email}}</h3><label>Institution<select v-model="selectedInstitutions[r.id]"><option v-for="i in data.institutions" :key="i.id" :value="i.id">{{i.title}}</option></select></label><button class="button primary" :disabled="busy||!selectedInstitutions[r.id]" @click="save('profiles/'+r.id+'/institution',{institution_id:selectedInstitutions[r.id]})">Assign student</button></article><p v-if="loaded&&!data['profiles/unassigned']?.length">No unassigned students.</p></section>
+            <section class="panel"><h2>Provider and student applications</h2><p v-if="loadErrors.applications" class="connection-error" role="alert">{{loadErrors.applications}}</p><article v-for="r in data.applications" :key="r.id" class="data-row"><h3>{{r.details?.full_name||r.user_id}} · {{r.account_type}}</h3><p>{{r.details?.organization||r.details?.subject||r.details?.email}}</p><label v-if="r.account_type!=='student'">Institution<select v-model="selectedInstitutions[r.id]" required><option value="" disabled>Select institution</option><option v-for="i in data.institutions||[]" :key="i.id" :value="i.id">{{i.title}}</option></select></label><div class="actions"><button class="button primary" :disabled="busy||(r.account_type!=='student'&&!selectedInstitutions[r.id])" @click="review(r,'approved')">Approve</button><button class="button subtle" :disabled="busy" @click="review(r,'rejected')">Reject</button></div></article><p v-if="loaded&&!loadErrors.applications&&!data.applications?.length">No pending applications.</p></section>
+            <section class="panel"><h2>Students awaiting institution assignment</h2><p v-if="loadErrors['profiles/unassigned']" class="connection-error" role="alert">{{loadErrors['profiles/unassigned']}}</p><p v-if="loadErrors.institutions" class="connection-error" role="alert">{{loadErrors.institutions}}</p><p v-if="loaded&&!loadErrors.institutions&&!data.institutions?.length">No institutions available. Create an institution first.</p><article v-for="r in data['profiles/unassigned']" :key="r.id" class="data-row"><h3>{{r.full_name||r.email}}</h3><label>Institution<select v-model="selectedInstitutions[r.id]" required><option value="" disabled>Select institution</option><option v-for="i in data.institutions||[]" :key="i.id" :value="i.id">{{i.title}}</option></select></label><button v-if="selectedInstitutions[r.id]&&data.institutions?.length&&!loadErrors.institutions&&!loadErrors['profiles/unassigned']" class="button primary" :disabled="busy" @click="save('profiles/'+r.id+'/institution',{institution_id:selectedInstitutions[r.id]})">Assign student</button></article><p v-if="loaded&&!loadErrors['profiles/unassigned']&&!data['profiles/unassigned']?.length">No verified unassigned students.</p></section>
           </template>
           <template v-else>
-            <section class="panel"><h2>{{title}}</h2><p v-if="busy&&!loaded">Loading your records…</p><p v-if="loaded&&!rows.length">No records available for your account.</p>
+            <section class="panel"><h2>{{title}}</h2><p v-if="busy&&!loaded">Loading your records…</p><p v-if="loaded&&!loadErrors[page]&&!rows.length">No records available for your account.</p>
+              <p v-if="loadErrors[page]" class="connection-error" role="alert">{{loadErrors[page]}}</p>
               <article v-for="r in rows" :key="r.id" class="data-row">
                 <h3>{{r.title||r.body||(page==='attendance'?r.status:page==='payments'?r.currency+' '+r.amount:page==='results'?'Score: '+(r.score??'Not graded'):r.id)}}</h3>
                 <p v-if="r.class_id">{{className(r.class_id)}}</p><p v-if="r.description||r.instructions">{{r.description||r.instructions}}</p>
@@ -118,7 +136,7 @@ onMounted(load)
             </section>
             <form v-if="page==='courses'&&manager" class="panel" @submit.prevent="createCourse"><h2>Create course</h2><label>Title<input v-model="course.title" required maxlength="120"></label><label>Description<textarea v-model="course.description" maxlength="2000"></textarea></label><button class="button primary" :disabled="busy||!institution">Save course</button></form>
             <div v-if="page==='classes'&&admin" class="connected-grid">
-              <form class="panel" @submit.prevent="createClass"><h2>Create classroom</h2><label>Title<input v-model="classroom.title" required maxlength="120"></label><label>Subject<input v-model="classroom.subject" maxlength="120"></label><label>Course<select v-model="classroom.course_id"><option value="">No course</option><option v-for="r in availableCourses" :key="r.id" :value="r.id">{{r.title}}</option></select></label><label>Teacher<select v-model="classroom.teacher_id"><option value="">Not assigned</option><option v-for="r in availableTeachers" :key="r.id" :value="r.id">{{r.teacher_code||r.id}}</option></select></label><button class="button primary" :disabled="busy||!institution">Save classroom</button></form>
+              <form class="panel" @submit.prevent="createClass"><h2>Create classroom</h2><label>Title<input v-model="classroom.title" required maxlength="120"></label><label>Subject<input v-model="classroom.subject" required maxlength="120"></label><label>Course<select v-model="classroom.course_id"><option value="">No course</option><option v-for="r in availableCourses" :key="r.id" :value="r.id">{{r.title}}</option></select></label><label>Teacher<select v-model="classroom.teacher_id"><option value="">Not assigned</option><option v-for="r in availableTeachers" :key="r.id" :value="r.id">{{r.teacher_code||r.id}}</option></select></label><button class="button primary" :disabled="busy||!institution">Save classroom</button></form>
               <form class="panel" @submit.prevent="save('enrollments',{...enrollment,institution_id:institution})"><h2>Enroll student</h2><label>Class<select v-model="enrollment.class_id" required><option v-for="r in institutionClasses" :key="r.id" :value="r.id">{{r.title}}</option></select></label><label>Student<select v-model="enrollment.student_id" required><option v-for="r in institutionStudents" :key="r.id" :value="r.id">{{r.student_code||r.id}}</option></select></label><button class="button primary" :disabled="busy||!institution">Enroll</button></form>
             </div>
             <form v-if="page==='schedule'&&admin" class="panel" @submit.prevent="schedule"><h2>Schedule class</h2><label>Class<select v-model="meeting.class_id" required><option v-for="r in data.classes" :key="r.id" :value="r.id">{{r.title}}</option></select></label><label>Title<input v-model="meeting.title" required maxlength="120"></label><label>Start (your local time)<input v-model="meeting.starts_at" type="datetime-local" required></label><label>End (your local time)<input v-model="meeting.ends_at" type="datetime-local" required></label><button class="button primary" :disabled="busy">Save session</button></form>
