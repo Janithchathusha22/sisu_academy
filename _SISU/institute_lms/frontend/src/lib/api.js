@@ -1,5 +1,6 @@
+import {authClient} from './supabase'
+
 const base = (import.meta.env?.VITE_API_BASE_URL || '').replace(/\/$/, '')
-let csrf = ''
 
 export class ApiError extends Error {
   constructor(message, status) {
@@ -8,21 +9,22 @@ export class ApiError extends Error {
   }
 }
 
-export function rememberSession(result) {
-  csrf = result?.csrf_token || ''
-  return result
+async function accessToken() {
+  const {data, error} = await authClient().auth.getSession()
+  if (error) throw new ApiError(error.message, 401)
+  return data.session?.access_token || ''
 }
 
 export async function api(path, {method = 'GET', body} = {}) {
+  const token = await accessToken()
   let response
   try {
     response = await fetch(base + path, {
       method,
-      credentials: 'include',
       cache: 'no-store',
       headers: {
         ...(body ? {'Content-Type': 'application/json'} : {}),
-        ...(!['GET', 'HEAD'].includes(method) && csrf ? {'X-CSRF-Token': csrf} : {}),
+        ...(token ? {Authorization: `Bearer ${token}`} : {}),
       },
       ...(body ? {body: JSON.stringify(body)} : {}),
     })
@@ -31,31 +33,23 @@ export async function api(path, {method = 'GET', body} = {}) {
   }
   if (!response.ok) {
     const detail = await response.json().catch(() => ({}))
-    if (response.status === 401 && !path.startsWith('/api/auth/')) {
-      csrf = ''
-      window.dispatchEvent(new Event('sisu-session-expired'))
-    }
+    if (response.status === 401) window.dispatchEvent(new Event('sisu-session-expired'))
     throw new ApiError(typeof detail.detail === 'string' ? detail.detail : `Request failed (${response.status})`, response.status)
   }
   return response.status === 204 ? null : response.json()
 }
 
 export async function currentSession() {
-  const hadSession = Boolean(csrf)
-  try {
-    return rememberSession(await api('/api/auth/session'))
-  } catch (error) {
-    if (error.status === 401) {
-      csrf = ''
-      if (hadSession) window.dispatchEvent(new Event('sisu-session-expired'))
-    }
-    throw error
-  }
+  const {data, error} = await authClient().auth.getSession()
+  if (error) throw new ApiError(error.message, 401)
+  if (!data.session) throw new ApiError('Authentication required', 401)
+  const profile = await api('/api/me')
+  return {user: data.session.user, profile, access_token: data.session.access_token}
 }
 
 export async function logoutSession() {
-  await api('/api/auth/session', {method: 'DELETE'})
-  csrf = ''
+  const {error} = await authClient().auth.signOut()
+  if (error) throw new ApiError(error.message, 400)
 }
 
 export async function requestRoute(module, method) {

@@ -1,17 +1,16 @@
-import {currentSession, logoutSession} from './api'
-import {requestPasswordReset, signIn, signInWithGoogle} from './supabase'
+import {currentSession} from './api'
+import {authClient, requestPasswordReset, signIn, signInWithGoogle, signOut} from './supabase'
 
 export const restoreSession = currentSession
 export const sendPasswordReset = requestPasswordReset
-export const signOut = logoutSession
+export {signOut}
 
 export function onAuthStateChange(callback) {
-  const handleExpired = () => callback('SIGNED_OUT', null)
-  window.addEventListener('sisu-session-expired', handleExpired)
-  return () => window.removeEventListener('sisu-session-expired', handleExpired)
+  const {data} = authClient().auth.onAuthStateChange((event, session) => callback(event, session))
+  return () => data.subscription.unsubscribe()
 }
 
 export async function signInWithPassword(email, password) {
-  const session = await signIn(email, password)
-  return {data: session, session}
+  const data = await signIn(email, password)
+  return {data, session: data.session}
 }

@@ -1,6 +1,7 @@
 <script setup>
 import {ref} from 'vue'
 import {signInWithGoogle,signUp} from '../lib/supabase'
+import {currentSession} from '../lib/api'
 
 const emit=defineEmits(['back','authenticated'])
 const type=ref('student'),busy=ref(false),error=ref(''),done=ref(false)
@@ -11,7 +12,7 @@ async function submit(){
   try{
     const data=await signUp({email:form.value.email,password:form.value.password,fullName:form.value.full_name,
       accountType:type.value,details:{organization:form.value.organization,subject:form.value.subject,country:form.value.country,timezone:form.value.timezone}})
-    if(data.user)emit('authenticated',data)
+    if(data.session)emit('authenticated',await currentSession())
     else done.value=true
   }catch(e){error.value=e.message}finally{busy.value=false}
 }

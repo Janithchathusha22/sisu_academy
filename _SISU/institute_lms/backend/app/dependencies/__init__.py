@@ -7,6 +7,7 @@ from fastapi import Depends, Header, HTTPException, Request
 
 from ..config import get_settings
 from ..database import user_client
+from ..auth_transport import auth_request
 from ..identity_context import load_identity
 from ..sessions import digest, load_session, refresh_and_validate
 from .auth import Membership, Principal as BearerPrincipal, get_current_user
@@ -23,8 +24,30 @@ class Principal:
 	account_status: str
 
 
-def current_user(request: Request, x_csrf_token: str | None = Header(default=None)) -> Principal:
+def current_user(
+	request: Request,
+	authorization: str | None = Header(default=None),
+	x_csrf_token: str | None = Header(default=None),
+) -> Principal:
 	settings = get_settings()
+	if authorization:
+		scheme, separator, token = authorization.partition(" ")
+		if scheme.lower() != "bearer" or not separator or not token.strip():
+			raise HTTPException(401, "Bearer token required")
+		token = token.strip()
+		auth_user = auth_request("GET", "user", token=token)
+		user_id = auth_user.get("id")
+		if not user_id:
+			raise HTTPException(401, "Invalid or expired token")
+		profile = load_identity(user_client(token), str(user_id))
+		if not profile:
+			raise HTTPException(403, "Profile not provisioned")
+		return Principal(
+			str(user_id), auth_user.get("email"), profile.get("role"),
+			profile.get("institution_id"), token, "", profile.get("account_status", "pending"),
+		)
+
+	# Retain the existing opaque-cookie flow for old same-origin clients during migration.
 	raw_id = request.cookies.get(settings.session_cookie_name)
 	session = load_session(raw_id)
 	if request.method not in {"GET", "HEAD", "OPTIONS"}:

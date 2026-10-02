@@ -11,7 +11,7 @@ from fastapi import HTTPException
 from fastapi.testclient import TestClient
 from starlette.requests import Request
 
-from app import auth, auth_transport, config, database, dependencies, sessions
+from app import auth, auth_transport, config, database, dependencies, main, sessions
 from app.main import app
 
 ORIGIN = 'http://127.0.0.1:5178'
@@ -69,6 +69,8 @@ def env(monkeypatch):
         return {}
     monkeypatch.setattr(auth,'auth_request',transport)
     monkeypatch.setattr(sessions,'auth_request',transport)
+    monkeypatch.setattr(dependencies,'auth_request',transport)
+    monkeypatch.setattr(main,'user_client',lambda token: ProfileQuery())
     with TestClient(app,base_url=ORIGIN) as client:
         yield SimpleNamespace(client=client,settings=settings,store=store,profile=profile,calls=calls)
 
@@ -88,6 +90,26 @@ def test_login_cookie_tokens_and_reload(env):
     restored=env.client.get('/api/auth/session')
     assert restored.status_code==200
     assert restored.json()['csrf_token']==response.json()['csrf_token']
+
+def test_bearer_token_loads_verified_profile(env):
+    response=env.client.get('/api/me',headers={'Authorization':'Bearer access-test'})
+    assert response.status_code==200
+    assert response.json()['id']==UID
+    assert response.json()['role']=='student'
+
+def test_malformed_bearer_token_is_rejected(env):
+    response=env.client.get('/api/me',headers={'Authorization':'Basic access-test'})
+    assert response.status_code==401
+    assert response.json()['detail']=='Bearer token required'
+
+def test_cors_preflight_allows_authorization_header(env):
+    response=env.client.options('/api/me',headers={
+        'Origin':ORIGIN,
+        'Access-Control-Request-Method':'GET',
+        'Access-Control-Request-Headers':'authorization',
+    })
+    assert response.status_code==200
+    assert 'authorization' in response.headers['access-control-allow-headers'].lower()
 
 @pytest.mark.parametrize('origin',[None,'https://evil.example'])
 def test_login_rejects_missing_or_foreign_origin(env,origin):

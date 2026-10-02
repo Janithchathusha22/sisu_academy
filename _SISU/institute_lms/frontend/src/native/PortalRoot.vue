@@ -3,7 +3,7 @@ import {ref,defineAsyncComponent,onMounted,onBeforeUnmount} from 'vue'
 import Icon from '../Icon.vue'
 import {previewMode} from '../preview/mode'
 import {currentSession} from '../lib/api'
-import {requestPasswordReset,signIn,signInWithGoogle,updatePassword} from '../lib/supabase'
+import {authClient,requestPasswordReset,signIn,signInWithGoogle,updatePassword} from '../lib/supabase'
 const Preview=previewMode?defineAsyncComponent(()=>import('../preview/PreviewShell.vue')):null
 const Campus=defineAsyncComponent(()=>import('./SupabaseCampus.vue'))
 const Signup=defineAsyncComponent(()=>import('./RegistrationFlow.vue'))
@@ -11,6 +11,7 @@ const localPreviewAvailable=import.meta.env.DEV&&['localhost','127.0.0.1','[::1]
 const session=ref(null),error=ref(''),busy=ref(true),selected=ref('Student'),signup=ref(false),dark=ref(false)
 const email=ref(''),password=ref(''),notice=ref(''),showPassword=ref(false)
 const recoverySession=ref(null),newPassword=ref('')
+let authSubscription
 const roles=[{name:'Student',icon:'GraduationCap',text:'Learn, explore and grow.'},{name:'Teacher',icon:'BookOpen',text:'Individual teacher or institute.'}]
 async function accept(data){session.value=data;password.value=''}
 async function login(){
@@ -18,7 +19,7 @@ async function login(){
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value.trim())){error.value='Enter a valid email address.';return}
   if(!password.value){error.value='Enter your password.';return}
   busy.value=true
-  try{await accept(await signIn(email.value.trim(),password.value))}catch(e){error.value=e.message}finally{busy.value=false}
+  try{await signIn(email.value.trim(),password.value);await accept(await currentSession())}catch(e){error.value=e.message}finally{busy.value=false}
 }
 async function google(){error.value='';try{await signInWithGoogle()}catch(e){error.value=e.message}}
 async function reset(){error.value='';notice.value='';try{if(!email.value)throw Error('Enter your email first.');await requestPasswordReset(email.value);notice.value='Password reset email sent.'}catch(e){error.value=e.message}}
@@ -27,8 +28,8 @@ async function connect(){busy.value=true;error.value='';try{session.value=await 
 async function authenticated(value){session.value=value;signup.value=false}
 function logout(){session.value=null;recoverySession.value=null}
 function expired(){logout();error.value='Your session expired. Please sign in again.'}
-onMounted(async()=>{if(previewMode)return;window.addEventListener('sisu-session-expired',expired);const params=new URLSearchParams(location.search);await connect();if(params.get('recovery')==='1'&&session.value)recoverySession.value=true;if(params.has('auth_error'))error.value='The sign-in link could not be completed. Request a new link and open it in the same browser.';if(params.has('auth_error')||params.has('recovery'))history.replaceState({},'',location.pathname)})
-onBeforeUnmount(()=>window.removeEventListener('sisu-session-expired',expired))
+onMounted(async()=>{if(previewMode)return;window.addEventListener('sisu-session-expired',expired);try{authSubscription=authClient().auth.onAuthStateChange((event)=>{if(event==='PASSWORD_RECOVERY')recoverySession.value=true;if(event==='SIGNED_OUT')logout()}).data.subscription;await connect()}catch(e){error.value=e.message;busy.value=false}})
+onBeforeUnmount(()=>{window.removeEventListener('sisu-session-expired',expired);authSubscription?.unsubscribe()})
 </script>
 <template>
   <Preview v-if="previewMode"/>

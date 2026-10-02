@@ -12,15 +12,17 @@ from .auth import router as auth_router
 from .config import get_settings
 from .database import user_client
 from .dependencies import Principal, active_user, current_user, require_roles
+from .identity_context import load_identity
 
 settings = get_settings()
 app = FastAPI(title="Sisu Academy API")
+app.state.settings = settings
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[settings.frontend_url.rstrip("/")],
+    allow_origins=settings.allowed_origins,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE"],
-    allow_headers=["Content-Type", "X-CSRF-Token"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-CSRF-Token"],
 )
 app.include_router(auth_router)
 
@@ -98,21 +100,17 @@ class AttendanceUpdate(BaseModel):
 
 @app.get("/api/health")
 def health():
-    configured = bool(settings.supabase_url and settings.supabase_publishable_key and settings.supabase_service_role_key)
-    configured = configured and bool(settings.supabase_database_url and len(settings.session_secret) >= 32)
+    configured = bool(settings.supabase_url and settings.supabase_publishable_key)
     return {"status": "running", "backend": "FastAPI", "database": "Supabase PostgreSQL", "configured": configured,
             "connectivity_verified": False}
 
 
 @app.get("/api/me")
 def me(user: Principal = Depends(current_user)):
-    rows = user_client(user.token).table("profiles").select(
-        "id,email,username,full_name,profile_kind,status,language,country,bio,tagline,"
-        "curriculum,languages,grades,qualifications,socials,avatar_path,cover_path,created_at,updated_at"
-    ).eq("id", user.id).limit(1).execute().data
-    if not rows:
+    profile = load_identity(user_client(user.token), user.id)
+    if not profile:
         raise HTTPException(403, "Profile not provisioned")
-    return rows[0]
+    return profile
 
 
 @app.get("/api/courses")
