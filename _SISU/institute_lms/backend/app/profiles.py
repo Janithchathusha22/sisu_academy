@@ -80,7 +80,34 @@ def institutions(user: Principal=Depends(require_roles('super_admin','institute_
 @router.get('/profiles/unassigned')
 def unassigned(user: Principal=Depends(require_roles('super_admin'))):
     client = user_client(user.token)
-    profiles = client.table('profiles').select('id,full_name,email').eq('profile_kind','student').eq('status','verified').limit(100).execute().data
-    assigned = client.table('institution_memberships').select('user_id').in_('status',['pending','active']).execute().data
-    assigned_ids = {row['user_id'] for row in assigned}
+    page_size = 100
+    profiles = []
+    offset = 0
+    while True:
+        page = (
+            client.table('profiles')
+            .select('id,full_name,email')
+            .eq('profile_kind', 'student')
+            .eq('status', 'verified')
+            .range(offset, offset + page_size - 1)
+            .execute()
+            .data or []
+        )
+        profiles.extend(page)
+        if len(page) < page_size:
+            break
+        offset += page_size
+
+    assigned_ids = set()
+    for offset in range(0, len(profiles), page_size):
+        profile_ids = [profile['id'] for profile in profiles[offset:offset + page_size]]
+        assigned = (
+            client.table('institution_memberships')
+            .select('user_id')
+            .in_('user_id', profile_ids)
+            .in_('status', ['pending', 'active'])
+            .execute()
+            .data or []
+        )
+        assigned_ids.update(row['user_id'] for row in assigned)
     return [profile for profile in profiles if profile['id'] not in assigned_ids]

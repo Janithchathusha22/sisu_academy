@@ -20,6 +20,7 @@ class Query:
         self.name = table
         self.filters = []
         self.columns = None
+        self.row_range = None
 
     def select(self, *args):
         if args and args[0] != "*":
@@ -37,6 +38,10 @@ class Query:
     def limit(self, *args):
         return self
 
+    def range(self, start, end):
+        self.row_range = (start, end + 1)
+        return self
+
     def execute(self):
         rows = self.client.rows.get(self.name, [])
         for column, expected in self.filters:
@@ -44,6 +49,8 @@ class Query:
                 rows = [row for row in rows if row.get(column) in expected]
             else:
                 rows = [row for row in rows if row.get(column) == expected]
+        if self.row_range:
+            rows = rows[slice(*self.row_range)]
         if self.columns:
             rows = [{column: row[column] for column in self.columns if column in row} for row in rows]
         return SimpleNamespace(data=rows)
@@ -203,6 +210,26 @@ def test_super_admin_reads_only_verified_students_without_pending_or_active_memb
         "email": student["email"],
         "full_name": student["full_name"],
     }]
+
+
+def test_unassigned_student_listing_includes_students_after_first_page(api_client):
+    test_client, supabase, _, _ = api_client
+    late_student_ids = []
+    for index in range(101):
+        profile_id = f"90000000-0000-0000-0000-{index:012d}"
+        late_student_ids.append(profile_id)
+        supabase.rows["profiles"].append({
+            "id": profile_id,
+            "email": f"student-{index}@example.test",
+            "full_name": f"Student {index}",
+            "profile_kind": "student",
+            "status": "verified",
+        })
+
+    response = test_client.get("/api/profiles/unassigned", headers=auth_headers())
+
+    assert response.status_code == 200
+    assert {row["id"] for row in response.json()} >= set(late_student_ids)
 
 
 def test_super_admin_reads_institutions_with_required_fields(api_client):
