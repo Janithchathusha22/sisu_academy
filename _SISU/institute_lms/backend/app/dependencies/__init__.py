@@ -9,8 +9,10 @@ current_user = get_current_user
 
 
 def active_user(user: Principal = Depends(current_user)) -> Principal:
+    if user.account_status == "pending":
+        raise HTTPException(403, "Application profile approval is pending")
     if user.account_status != "active" or not user.role:
-        raise HTTPException(403, "Account approval required")
+        raise HTTPException(403, "Application profile is not approved")
     return user
 
 

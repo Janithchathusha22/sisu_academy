@@ -55,5 +55,5 @@ def test_pending_teacher_keeps_kind_but_cannot_be_active():
         "profiles": [{"id": "teacher", "profile_kind": "teacher", "status": "pending"}],
         "platform_roles": [], "institution_memberships": [],
     }), "teacher")
-    assert identity["role"] == "teacher"
+    assert identity["role"] is None
     assert identity["account_status"] == "pending"

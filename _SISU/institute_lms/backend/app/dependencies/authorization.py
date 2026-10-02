@@ -4,7 +4,8 @@ from collections.abc import Callable
 
 from fastapi import Depends, HTTPException, status
 
-from .auth import Membership, Principal, get_current_user
+from .auth import Membership, Principal
+from . import active_user
 
 
 INSTITUTE_ROLES = frozenset({"institute_admin", "teacher", "student"})
@@ -15,7 +16,7 @@ TEACHING_ROLES = frozenset({"institute_admin", "teacher"})
 def require_platform_role(*allowed: str) -> Callable[..., Principal]:
     expected = frozenset(allowed)
 
-    def dependency(principal: Principal = Depends(get_current_user)) -> Principal:
+    def dependency(principal: Principal = Depends(active_user)) -> Principal:
         if not principal.platform_roles.intersection(expected):
             raise HTTPException(status.HTTP_403_FORBIDDEN, "Platform role required")
         return principal

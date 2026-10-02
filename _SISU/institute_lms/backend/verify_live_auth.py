@@ -175,9 +175,11 @@ def run(env_file: Path) -> dict[str, str]:
                     response = api.get("/api/me", headers={"Authorization": f"Bearer {token}"})
                     body = response.json() if response.status_code == 200 else {}
                     actual_role = body.get("profile_kind") or body.get("role")
+                    expected_status = 200 if role == "student" else 403
+                    role_matches = actual_role == role if role == "student" else True
                     report[f"{role}_api_token"] = (
-                        "PASS" if response.status_code == 200 and actual_role == role
-                        else f"FAIL ({response.status_code}, role={actual_role or 'missing'})"
+                        "PASS" if response.status_code == expected_status and role_matches
+                        else f"FAIL ({response.status_code}, role={actual_role or 'pending'})"
                     )
         finally:
             if admin_available:

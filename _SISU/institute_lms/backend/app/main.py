@@ -10,8 +10,7 @@ from uuid import UUID
 
 from .config import get_settings
 from .database import user_client
-from .dependencies import Principal, active_user, current_user, require_roles
-from .identity_context import load_identity
+from .dependencies import Principal, active_user, require_roles
 
 settings = get_settings()
 app = FastAPI(title="Sisu Academy API")
@@ -104,11 +103,8 @@ def health():
 
 
 @app.get("/api/me")
-def me(user: Principal = Depends(current_user)):
-    profile = load_identity(user_client(user.token), user.id)
-    if not profile:
-        raise HTTPException(403, "Profile not provisioned")
-    return profile
+def me(user: Principal = Depends(active_user)):
+    return user.profile
 
 
 @app.get("/api/courses")

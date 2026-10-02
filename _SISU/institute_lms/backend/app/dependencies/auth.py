@@ -6,10 +6,13 @@ from typing import Any
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from postgrest.exceptions import APIError
+from supabase_auth.errors import AuthApiError, AuthRetryableError
+import httpx
 
 from ..config import Settings
 from ..database import user_client
 from ..identity_context import load_identity
+from ..token_validation import validate_access_token
 
 
 bearer = HTTPBearer(auto_error=False)
@@ -61,12 +64,18 @@ def runtime_settings(request: Request) -> Settings:
     return settings
 
 
-def _optional_rows(query) -> list[dict[str, Any]]:
+def _provision_profile(client) -> None:
+    """Complete confirmed-user onboarding through the database-owned policy."""
     try:
-        return query.execute().data or []
+        client.rpc("provision_current_profile").execute()
     except APIError as exc:
-        if exc.code in {"42P01", "PGRST205"}:
-            return []
+        # A hosted project that has not received the provisioning migration must
+        # fail closed instead of falling back to a server secret or guessed table.
+        if exc.code in {"42P01", "42703", "42883", "PGRST202", "PGRST204", "PGRST205"}:
+            raise HTTPException(
+                status.HTTP_503_SERVICE_UNAVAILABLE,
+                "Application profile provisioning is unavailable in the recovered database",
+            ) from exc
         raise
 
 
@@ -81,32 +90,50 @@ def get_current_user(
     if not token:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Bearer token required")
 
+    claims = validate_access_token(token, settings)
+    client = user_client(token, settings)
     try:
-        client = user_client(token, settings)
         auth_response = client.auth.get_user(token)
         auth_user = getattr(auth_response, "user", None)
         if auth_user is None:
             raise ValueError("Supabase returned no user")
-        user_id = str(auth_user.id)
-        profile = load_identity(client, user_id)
-        if not profile:
-            raise HTTPException(status.HTTP_403_FORBIDDEN, "Profile not provisioned")
-        role_rows = _optional_rows(
-            client.table("platform_roles")
-            .select("role,active")
-            .eq("user_id", user_id)
-            .eq("active", True)
-        )
-        membership_rows = _optional_rows(
-            client.table("institution_memberships")
-            .select("id,institution_id,user_id,role,status,member_code")
-            .eq("user_id", user_id)
-            .eq("status", "active")
-        )
-    except HTTPException:
-        raise
-    except Exception as exc:
+    except (AuthRetryableError, httpx.HTTPError) as exc:
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "Supabase authentication service is unavailable") from exc
+    except AuthApiError as exc:
+        if exc.status >= 500:
+            raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "Supabase authentication service is unavailable") from exc
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid or expired token") from exc
+    except ValueError as exc:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid or expired token") from exc
+    if str(auth_user.id) != str(claims["sub"]):
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid or expired token")
+
+    # Authentication succeeded. Keep profile/RLS/provisioning failures outside
+    # the token-validation exception boundary so they are never mislabeled 401.
+    user_id = str(auth_user.id)
+    profile = load_identity(client, user_id)
+    if not profile:
+        _provision_profile(client)
+        profile = load_identity(client, user_id)
+    if not profile:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            "Application profile provisioning is pending",
+        )
+    role_rows = (
+        client.table("platform_roles")
+        .select("role,active")
+        .eq("user_id", user_id)
+        .eq("active", True)
+        .execute().data or []
+    )
+    membership_rows = (
+        client.table("institution_memberships")
+        .select("id,institution_id,user_id,role,status,member_code")
+        .eq("user_id", user_id)
+        .eq("status", "active")
+        .execute().data or []
+    )
 
     memberships = tuple(
         Membership(
@@ -124,5 +151,5 @@ def get_current_user(
         token=token,
         profile=profile,
         memberships=memberships,
-        platform_roles=frozenset(str(row["role"]) for row in role_rows),
+        platform_roles=frozenset(str(row["role"]) for row in role_rows) if profile["account_status"] == "active" else frozenset(),
     )
