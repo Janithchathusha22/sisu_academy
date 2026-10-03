@@ -58,7 +58,8 @@ def test_future_issued_at_reports_clock_issue_without_accepting_token(signing):
     with pytest.raises(HTTPException) as error:
         token_validation.validate_access_token(token, settings)
     assert error.value.status_code == 401
-    assert "UTC clock" in error.value.detail
+    assert error.value.detail["code"] == "session_not_yet_valid"
+    assert "UTC clock" in error.value.detail["message"]
 
 
 def test_future_not_before_reports_clock_issue_without_accepting_token(signing):
@@ -73,7 +74,8 @@ def test_future_not_before_reports_clock_issue_without_accepting_token(signing):
     with pytest.raises(HTTPException) as error:
         token_validation.validate_access_token(token, settings)
     assert error.value.status_code == 401
-    assert "UTC clock" in error.value.detail
+    assert error.value.detail["code"] == "session_not_yet_valid"
+    assert "UTC clock" in error.value.detail["message"]
 
 
 @pytest.mark.parametrize("change", [

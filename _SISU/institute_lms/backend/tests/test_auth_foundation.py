@@ -38,7 +38,7 @@ def test_health_does_not_claim_database_connectivity():
 def test_protected_api_rejects_missing_bearer_token():
     response = TestClient(app).get("/api/courses")
     assert response.status_code == 401
-    assert response.json()["detail"] == "Bearer token required"
+    assert response.json()["detail"]["code"] == "authentication_required"
 
 
 def test_mutation_rejects_missing_bearer_token():

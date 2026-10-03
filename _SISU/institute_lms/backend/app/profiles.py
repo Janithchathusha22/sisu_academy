@@ -3,7 +3,7 @@ from typing import Literal
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from .database import user_client
-from .dependencies import Principal, current_user, require_roles
+from .dependencies import Principal, active_user, current_user, require_roles
 
 router=APIRouter(prefix='/api', tags=['profiles'])
 
@@ -73,7 +73,7 @@ def assign_student(profile_id: UUID, data: Assignment, user: Principal=Depends(r
     return {'status':'assigned'}
 
 @router.get('/institutions')
-def institutions(user: Principal=Depends(require_roles('super_admin','institute_admin'))):
+def institutions(user: Principal=Depends(active_user)):
     rows = user_client(user.token).table('institutions').select('id,title,code').execute().data
     return rows if rows is not None else []
 

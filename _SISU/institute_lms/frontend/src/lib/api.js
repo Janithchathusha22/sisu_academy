@@ -4,9 +4,10 @@ import {safeApiErrorMessage} from './api-errors.js'
 const base = (import.meta.env?.VITE_API_BASE_URL || '').replace(/\/$/, '')
 
 export class ApiError extends Error {
-  constructor(message, status) {
+  constructor(message, status, code = '') {
     super(message)
     this.status = status
+    this.code = code
   }
 }
 
@@ -33,11 +34,18 @@ export async function api(path, {method = 'GET', body} = {}) {
     throw new ApiError(safeApiErrorMessage(0), 0)
   }
   if (!response.ok) {
-    if (response.status === 401) {
+    let code = ''
+    let detail = {}
+    try {
+      const payload = await response.json()
+      detail = typeof payload?.detail === 'object' ? payload.detail : {}
+      code = detail.code || ''
+    } catch { /* The status fallback remains safe for non-JSON failures. */ }
+    if (response.status === 401 && code !== 'session_not_yet_valid') {
       window.dispatchEvent(new Event('sisu-session-expired'))
       await clearLocalSession().catch(() => {})
     }
-    throw new ApiError(safeApiErrorMessage(response.status), response.status)
+    throw new ApiError(safeApiErrorMessage(response.status, code, detail), response.status, code)
   }
   return response.status === 204 ? null : response.json()
 }

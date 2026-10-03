@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from typing import Any
 
-from fastapi import Depends, HTTPException, Request, status
+from fastapi import Depends, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from postgrest.exceptions import APIError
 from supabase_auth.errors import AuthApiError, AuthRetryableError
@@ -11,6 +11,7 @@ import httpx
 
 from ..config import Settings
 from ..database import user_client
+from ..errors import public_error
 from ..identity_context import load_identity
 from ..token_validation import validate_access_token
 
@@ -73,9 +74,10 @@ def _provision_profile(client) -> None:
         # A hosted project that has not received the provisioning migration must
         # fail closed instead of falling back to a server secret or guessed table.
         if exc.code in {"42P01", "42703", "42883", "PGRST202", "PGRST204", "PGRST205"}:
-            raise HTTPException(
+            raise public_error(
                 status.HTTP_503_SERVICE_UNAVAILABLE,
-                "Application profile provisioning is unavailable in the recovered database",
+                "profile_provisioning_unavailable",
+                "Profile setup is temporarily unavailable. Contact the administrator.",
             ) from exc
         raise
 
@@ -85,11 +87,11 @@ def get_current_user(
     settings: Settings = Depends(runtime_settings),
 ) -> Principal:
     if credentials is None or credentials.scheme.lower() != "bearer":
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Bearer token required")
+        raise public_error(status.HTTP_401_UNAUTHORIZED, "authentication_required", "Please sign in to continue.")
 
     token = credentials.credentials.strip()
     if not token:
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Bearer token required")
+        raise public_error(status.HTTP_401_UNAUTHORIZED, "authentication_required", "Please sign in to continue.")
 
     claims = validate_access_token(token, settings)
     client = user_client(token, settings)
@@ -97,27 +99,33 @@ def get_current_user(
         auth_response = client.auth.get_user(token)
         auth_user = getattr(auth_response, "user", None)
     except (AuthRetryableError, httpx.HTTPError) as exc:
-        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "Supabase authentication service is unavailable") from exc
+        raise public_error(status.HTTP_503_SERVICE_UNAVAILABLE, "auth_service_unavailable", "The sign-in service is temporarily unavailable.") from exc
     except AuthApiError as exc:
         if exc.status >= 500:
-            raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "Supabase authentication service is unavailable") from exc
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Supabase rejected the sign-in session") from exc
+            raise public_error(status.HTTP_503_SERVICE_UNAVAILABLE, "auth_service_unavailable", "The sign-in service is temporarily unavailable.") from exc
+        raise public_error(status.HTTP_401_UNAUTHORIZED, "session_rejected", "The sign-in session is no longer valid.") from exc
     if auth_user is None:
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Supabase session has no user")
+        raise public_error(status.HTTP_401_UNAUTHORIZED, "session_rejected", "The sign-in session has no user.")
     if str(auth_user.id) != str(claims["sub"]):
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Supabase session user does not match the token")
+        raise public_error(status.HTTP_401_UNAUTHORIZED, "session_rejected", "The sign-in session does not match this user.")
 
     # Authentication succeeded. Keep profile/RLS/provisioning failures outside
     # the token-validation exception boundary so they are never mislabeled 401.
     user_id = str(auth_user.id)
     profile = load_identity(client, user_id)
-    if not profile:
+    recover_historical_student = bool(
+        profile
+        and profile.get("profile_kind") == "student"
+        and profile.get("account_status") == "pending"
+    )
+    if not profile or recover_historical_student:
         _provision_profile(client)
         profile = load_identity(client, user_id)
     if not profile:
-        raise HTTPException(
+        raise public_error(
             status.HTTP_403_FORBIDDEN,
-            "Application profile provisioning is pending",
+            "profile_missing",
+            "Your application profile has not been created yet.",
         )
     role_rows = (
         client.table("platform_roles")

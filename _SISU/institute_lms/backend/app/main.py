@@ -51,12 +51,12 @@ app.include_router(resource_reads)
 
 @app.exception_handler(RuntimeError)
 async def configuration_error(request, exc):
-    return JSONResponse(status_code=503, content={"detail": "Server configuration is incomplete. Contact the administrator."})
+    return JSONResponse(status_code=503, content={"detail": {"code": "server_configuration", "message": "Server configuration is incomplete. Contact the administrator."}})
 
 
 @app.exception_handler(psycopg.Error)
 async def postgres_error(request, exc):
-    return JSONResponse(status_code=503, content={"detail": "Database connection unavailable. Contact the administrator."})
+    return JSONResponse(status_code=503, content={"detail": {"code": "database_unavailable", "message": "The database is temporarily unavailable."}})
 
 
 @app.middleware("http")
@@ -80,14 +80,17 @@ async def validation_error(request, exc):
 async def database_error(request, exc):
     forbidden = exc.code == "42501"
     return JSONResponse(status_code=403 if forbidden else 503, content={
-        "detail": "Permission denied." if forbidden else "Database operation unavailable. Contact the administrator."
+        "detail": {
+            "code": "permission_denied" if forbidden else "database_unavailable",
+            "message": "You do not have permission to complete this request." if forbidden else "The database operation is temporarily unavailable.",
+        }
     })
 
 
 @app.exception_handler(httpx.HTTPError)
 async def network_error(request, exc):
     return JSONResponse(status_code=503, content={
-        "detail": "The server could not reach the authentication or database service."
+        "detail": {"code": "upstream_unavailable", "message": "The server could not reach a required service."}
     })
 
 
@@ -108,6 +111,13 @@ class CourseUpdate(BaseModel):
     title: str | None = Field(default=None, min_length=1, max_length=120)
     description: str | None = Field(default=None, max_length=2000)
     published: bool | None = None
+
+
+class ClassUpdate(BaseModel):
+    title: str | None = Field(default=None, min_length=1, max_length=120)
+    subject: str | None = Field(default=None, min_length=1, max_length=120)
+    published: bool | None = None
+    active: bool | None = None
 
 
 class AttendanceUpdate(BaseModel):
@@ -137,7 +147,19 @@ def me(user: Principal = Depends(active_user)):
 
 @app.get("/api/courses")
 def courses(user: Principal = Depends(active_user)):
-    return user_client(user.token).table("courses").select("*").order("created_at", desc=True).execute().data
+    client = user_client(user.token)
+    query = client.table("courses").select("*")
+    if not user.is_super_admin and user.institution_id:
+        query = query.eq("institution_id", user.institution_id)
+    rows = query.order("created_at", desc=True).execute().data or []
+    if user.role not in {"student", "teacher"}:
+        return rows
+    linked_course_ids = {
+        str(row["course_id"]) for row in _workspace_classes(client, user) if row.get("course_id")
+    }
+    if user.role == "student":
+        return [row for row in rows if str(row["id"]) in linked_course_ids]
+    return [row for row in rows if row.get("created_by") == user.id or str(row["id"]) in linked_course_ids]
 
 
 @app.get("/api/courses/{course_id}")
@@ -171,7 +193,50 @@ def create_course(data: CourseInput, user: Principal = Depends(require_roles("te
 
 @app.get("/api/classes")
 def classes(user: Principal = Depends(active_user)):
-    return user_client(user.token).table("classes").select("*").order("created_at", desc=True).execute().data
+    return _workspace_classes(user_client(user.token), user)
+
+
+@app.put("/api/classes/{class_id}")
+def update_class(
+    class_id: UUID,
+    data: ClassUpdate,
+    user: Principal = Depends(require_roles("institute_admin", "super_admin")),
+):
+    changes = data.model_dump(exclude_none=True)
+    if not changes:
+        raise HTTPException(422, "No changes supplied")
+    rows = user_client(user.token).table("classes").update(changes).eq("id", str(class_id)).execute().data
+    if not rows:
+        raise HTTPException(404, "Class not found")
+    return rows[0]
+
+
+def _workspace_classes(client, user: Principal) -> list[dict]:
+    """Narrow the public catalogue to classes belonging in this workspace."""
+    query = client.table("classes").select("*")
+    if not user.is_super_admin and user.institution_id:
+        query = query.eq("institution_id", user.institution_id)
+    rows = query.order("created_at", desc=True).execute().data or []
+    if user.role == "student":
+        membership_id = user.profile.get("membership_id")
+        if not membership_id:
+            return []
+        enrollments = (
+            client.table("enrollments")
+            .select("class_id")
+            .eq("student_membership_id", membership_id)
+            .eq("status", "active")
+            .execute().data or []
+        )
+        enrolled = {str(row["class_id"]) for row in enrollments}
+        return [row for row in rows if str(row["id"]) in enrolled]
+    if user.role == "teacher":
+        memberships = {item.id for item in user.memberships if item.role == "teacher"}
+        return [
+            row for row in rows
+            if row.get("owner_user_id") == user.id or str(row.get("teacher_membership_id") or "") in memberships
+        ]
+    return rows
 
 
 @app.get("/api/students")

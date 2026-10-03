@@ -18,9 +18,8 @@ from jwt.exceptions import (
     PyJWKClientError,
     PyJWTError,
 )
-from fastapi import HTTPException
-
 from .config import Settings
+from .errors import public_error
 
 
 logger = logging.getLogger("sisu.auth")
@@ -139,19 +138,30 @@ def validate_access_token(token: str, settings: Settings) -> dict:
         return claims
     except PyJWKClientConnectionError as exc:
         _log_rejection(token, settings, exc)
-        raise HTTPException(503, "Supabase token verification service is unavailable") from exc
+        raise public_error(503, "token_verification_unavailable", "Session verification is temporarily unavailable.") from exc
     except ExpiredSignatureError as exc:
         _log_rejection(token, settings, exc)
-        raise HTTPException(401, "Sign-in session expired. Please sign in again") from exc
+        raise public_error(401, "session_expired", "Your session has expired. Please sign in again.") from exc
     except InvalidIssuerError as exc:
         _log_rejection(token, settings, exc)
-        raise HTTPException(401, "Sign-in session belongs to a different Supabase project") from exc
+        raise public_error(401, "session_project_mismatch", "This session belongs to a different project.") from exc
     except InvalidAudienceError as exc:
         _log_rejection(token, settings, exc)
-        raise HTTPException(401, "Sign-in session has an invalid audience") from exc
+        raise public_error(401, "session_invalid", "The sign-in session is invalid.") from exc
     except ImmatureSignatureError as exc:
         _log_rejection(token, settings, exc)
-        raise HTTPException(401, "Sign-in session is not valid yet; check this computer's UTC clock") from exc
+        diagnostics = safe_token_diagnostics(token, settings)
+        skew_seconds = max(
+            int(diagnostics.get("iat_seconds_ahead") or 0),
+            int(diagnostics.get("nbf_seconds_ahead") or 0),
+            0,
+        )
+        raise public_error(
+            401,
+            "session_not_yet_valid",
+            "This session is not valid yet. Correct the application host's UTC clock.",
+            clock_skew_seconds=skew_seconds,
+        ) from exc
     except (PyJWTError, ValueError) as exc:
         _log_rejection(token, settings, exc)
-        raise HTTPException(401, "Sign-in session signature or claims are invalid") from exc
+        raise public_error(401, "session_invalid", "The sign-in session is invalid.") from exc

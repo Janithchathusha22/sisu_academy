@@ -28,6 +28,7 @@ class Query:
         self.filters.append((column, value))
         return self
     def limit(self, *args): return self
+    def order(self, *args, **kwargs): return self
 
     def execute(self):
         if self.client.database_error:
@@ -45,6 +46,7 @@ class Rpc:
     def execute(self):
         if self.name != "provision_current_profile":
             raise AssertionError(f"Unexpected RPC: {self.name}")
+        self.client.provision_calls += 1
         kind = self.client.account_type
         self.client.rows["profiles"] = [{
             "id": UID,
@@ -73,6 +75,7 @@ class SupabaseClient:
         self.auth = Auth(valid)
         self.account_type = account_type
         self.application_created = False
+        self.provision_calls = 0
         self.database_error = False
         self.rows = {
             "profiles": [profile] if profile else [],
@@ -122,6 +125,15 @@ def test_resource_read_routes_use_v2_without_colliding_with_connected_api(client
     assert test_client.post("/api/v2/modules").status_code == 405
 
 
+def test_class_management_route_requires_authentication():
+    response = TestClient(app).put(
+        "/api/classes/10000000-0000-0000-0000-000000000001",
+        json={"published": True},
+    )
+    assert response.status_code == 401
+    assert response.json()["detail"]["code"] == "authentication_required"
+
+
 @pytest.mark.parametrize("header", [None, "Basic value", "Bearer "])
 def test_missing_or_malformed_bearer_is_rejected(client, header):
     test_client, _ = client
@@ -134,7 +146,7 @@ def test_invalid_or_expired_token_is_rejected(client):
     test_client, _ = client
     response = test_client.get("/api/me", headers={"Authorization": "Bearer invalid"})
     assert response.status_code == 401
-    assert response.json()["detail"] == "Supabase rejected the sign-in session"
+    assert response.json()["detail"]["code"] == "session_rejected"
 
 
 def test_supabase_auth_outage_is_503(client):
@@ -144,7 +156,7 @@ def test_supabase_auth_outage_is_503(client):
     supabase.auth.get_user = unavailable
     response = test_client.get("/api/me", headers={"Authorization": "Bearer valid-token"})
     assert response.status_code == 503
-    assert response.json()["detail"] == "Supabase authentication service is unavailable"
+    assert response.json()["detail"]["code"] == "auth_service_unavailable"
 
 
 def test_profile_database_failure_is_not_mislabeled_as_invalid_token(client):
@@ -152,7 +164,7 @@ def test_profile_database_failure_is_not_mislabeled_as_invalid_token(client):
     supabase.database_error = True
     response = test_client.get("/api/me", headers={"Authorization": "Bearer valid-token"})
     assert response.status_code == 503
-    assert response.json()["detail"] == "Server configuration is incomplete. Contact the administrator."
+    assert response.json()["detail"]["code"] == "server_configuration"
 
 
 def test_confirmed_student_without_profile_is_provisioned(client):
@@ -171,15 +183,19 @@ def test_unprovisioned_teacher_gets_application_but_remains_pending(monkeypatch)
     with TestClient(app, base_url=ORIGIN) as test_client:
         response = test_client.get("/api/me", headers={"Authorization": "Bearer valid-token"})
     assert response.status_code == 403
-    assert response.json()["detail"] == "Application profile approval is pending"
+    assert response.json()["detail"]["code"] == "profile_pending"
     assert supabase.application_created is True
+    assert supabase.provision_calls == 1
 
 
-def test_pending_profile_cannot_read_business_data(client):
+def test_confirmed_historical_pending_student_is_completed(client):
     test_client, supabase = client
     supabase.rows["profiles"][0]["status"] = "pending"
-    response = test_client.get("/api/courses", headers={"Authorization": "Bearer valid-token"})
-    assert response.status_code == 403
+    response = test_client.get("/api/me", headers={"Authorization": "Bearer valid-token"})
+    assert response.status_code == 200
+    assert response.json()["account_status"] == "active"
+    assert response.json()["application_role"] == "student"
+    assert supabase.provision_calls == 1
 
 
 @pytest.mark.parametrize("account_status", ["rejected", "suspended"])
@@ -188,7 +204,36 @@ def test_rejected_or_suspended_profile_is_not_reactivated(client, account_status
     supabase.rows["profiles"][0]["status"] = account_status
     response = test_client.get("/api/me", headers={"Authorization": "Bearer valid-token"})
     assert response.status_code == 403
+    assert response.json()["detail"]["code"] == f"account_{account_status}"
     assert supabase.rows["profiles"][0]["status"] == account_status
+    assert supabase.provision_calls == 0
+
+
+def test_student_workspace_lists_only_active_enrolled_classes(client):
+    test_client, supabase = client
+    membership_id = "20000000-0000-0000-0000-000000000002"
+    institution_id = "30000000-0000-0000-0000-000000000003"
+    supabase.rows["institution_memberships"] = [{
+        "id": membership_id,
+        "institution_id": institution_id,
+        "user_id": UID,
+        "role": "student",
+        "status": "active",
+        "member_code": "STU-1",
+    }]
+    supabase.rows["classes"] = [
+        {"id": "class-enrolled", "institution_id": institution_id, "title": "Enrolled", "created_at": "2026-10-03"},
+        {"id": "class-catalog", "institution_id": institution_id, "title": "Catalogue only", "created_at": "2026-10-03"},
+    ]
+    supabase.rows["enrollments"] = [
+        {"class_id": "class-enrolled", "student_membership_id": membership_id, "status": "active"},
+        {"class_id": "class-catalog", "student_membership_id": membership_id, "status": "cancelled"},
+    ]
+
+    response = test_client.get("/api/classes", headers={"Authorization": "Bearer valid-token"})
+
+    assert response.status_code == 200
+    assert [row["id"] for row in response.json()] == ["class-enrolled"]
 
 
 def test_pending_profile_is_not_returned_by_me(client):
@@ -197,7 +242,7 @@ def test_pending_profile_is_not_returned_by_me(client):
     supabase.rows["profiles"][0]["status"] = "pending"
     response = test_client.get("/api/me", headers={"Authorization": "Bearer valid-token"})
     assert response.status_code == 403
-    assert response.json()["detail"] == "Application profile approval is pending"
+    assert response.json()["detail"]["code"] == "profile_pending"
 
 
 def test_verified_provider_without_membership_gets_no_provider_access(client):
@@ -205,7 +250,7 @@ def test_verified_provider_without_membership_gets_no_provider_access(client):
     supabase.rows["profiles"][0]["profile_kind"] = "teacher"
     response = test_client.get("/api/me", headers={"Authorization": "Bearer valid-token"})
     assert response.status_code == 403
-    assert response.json()["detail"] == "Application profile is not approved"
+    assert response.json()["detail"]["code"] == "account_not_approved"
 
 
 def test_other_users_profile_is_not_used(client):

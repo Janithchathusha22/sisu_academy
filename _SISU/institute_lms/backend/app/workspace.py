@@ -47,12 +47,18 @@ def enroll(data: EnrollmentInput, user: Principal=Depends(require_roles('super_a
     return user_client(user.token).table('enrollments').insert(row).execute().data[0]
 
 @router.post('/schedule', status_code=201)
-def schedule(data: ScheduleInput, user: Principal=Depends(require_roles('super_admin','institute_admin'))):
+def schedule(data: ScheduleInput, user: Principal=Depends(require_roles('super_admin','institute_admin','teacher'))):
     client=user_client(user.token)
-    classes=client.table('classes').select('id,institution_id').eq('id',str(data.class_id)).limit(1).execute().data
+    classes=client.table('classes').select('id,institution_id,owner_user_id,teacher_membership_id').eq('id',str(data.class_id)).limit(1).execute().data
     if not classes:
         raise HTTPException(404,'Class not found')
-    row={**data.model_dump(mode='json'),'institution_id':classes[0]['institution_id'],'mode':'online'}
+    classroom=classes[0]
+    if user.role == 'teacher':
+        teacher_memberships={item.id for item in user.memberships if item.role == 'teacher'}
+        assigned=str(classroom.get('teacher_membership_id') or '') in teacher_memberships
+        if classroom.get('owner_user_id') != user.id and not assigned:
+            raise HTTPException(403,'Teaching assignment required')
+    row={**data.model_dump(mode='json'),'institution_id':classroom['institution_id'],'mode':'online'}
     return client.table('class_sessions').insert(row).execute().data[0]
 
 # Explicit allowlist; do not expose arbitrary tables or return exam questions.
